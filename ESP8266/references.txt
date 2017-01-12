@@ -1,0 +1,75 @@
+//display
+https://github.com/adafruit/Adafruit-GFX-Library
+https://github.com/adafruit/Adafruit_SSD1306
+http://www.instructables.com/id/Wemos-D1-Mini-096-SSD1306-OLED-Display-Using-SPI/
+
+//time
+https://www.hackster.io/rayburne/nist-date-amp-time-with-esp8266-and-oled-display-e8b9a9
+https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WiFi/examples/NTPClient/NTPClient.ino
+http://woodsgood.ca/projects/2016/02/21/ntp-synchronized-oled-clock/
+https://github.com/jandelgado/arduino/wiki/SSD1306-based-OLED-connected-to-Arduino
+
+//sleeping esp8266
+https://learn.sparkfun.com/tutorials/esp8266-thing-hookup-guide/example-sketch-goodnight-thing-sleep-mode
+https://github.com/esp8266/Arduino/issues/229
+
+//read write SQL
+http://www.esp8266.com/viewtopic.php?f=6&t=5780
+http://afterhoursengineering.net/blog/blog/2015/04/11/esp8266-read-and-write-data-to-a-database/
+http://stackoverflow.com/questions/20933327/arduino-control-led-via-wifi-based-on-mysql-database-value
+https://primalcortex.wordpress.com/2015/02/19/esp8266-logging-data-in-a-mysql-database/
+http://www.whatimade.today/esp8266-easiest-way-to-program-so-far/
+http://forum.arduino.cc/index.php?topic=434653.0
+
+//arduino button press
+http://www.instructables.com/id/Arduino-Stopwatch/
+http://www.gadgetronicx.com/arduino-based-voting-system/
+
+
+//SQL
+ SELECT location FROM kpi_mech.task_db WHERE Assignee = 'jomar' AND Severity <= 1 limit 1;
+
+* look for serverity and status is 1
+SELECT location FROM kpi_mech.task_db WHERE Assignee = 'jomar' AND Status = 1 ORDER BY Severity ASC limit 1; 
+
+SELECT ID, location FROM kpi_mech.task_db WHERE Assignee = 'jomar' AND Status = 1 ORDER BY Severity ASC limit 1;
+
+*update status
+UPDATE tbl_name
+SET col_name1=expr1 [, col_name2=expr2 ...]
+[WHERE where_definition]
+
+* update status
+UPDATE kpi_mech.task_db SET Status = 2 WHERE ID = 1;
+
+*udate time
+UPDATE kpi_mech.task_db SET StartTime = (Curtime()) WHERE ID = %lu;
+
+
+*update cancelled time
+insert into kpi_mech.cancel_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime());
+insert into kpi_mech.cancel_db (taskID, mech, date, time) values (1, 1, CURDATE(), Curtime());
+
+*update timeout time
+insert into kpi_mech.timeout_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime());
+insert into kpi_mech.timeout_db (taskID, mech, date, time) values (1, 1, CURDATE(), Curtime());
+
+
+INSERT INTO kpi_mech.task_db (message) VALUES ('Hello, Arduino!')
+
+
+//status
+0 = reported
+1 = assigned
+2 = start
+3 = end
+4 = completed 
+5 = camcelled
+6 = timeout
+
+
+//pc at NTP server
+https://social.technet.microsoft.com/Forums/windowsserver/en-US/ffb1df0b-7c6e-4b2d-8fdf-b4ca0c014266/configuring-windows-7-as-an-ntp-server?forum=winserverPN
+
+//html php font size
+http://stackoverflow.com/questions/28245146/how-can-i-change-font-size-of-php-variable

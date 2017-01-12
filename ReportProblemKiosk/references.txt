@@ -1,0 +1,73 @@
+RFID readings
+http://www.instructables.com/id/Scure-Lock-With-RFID-Tag-and-PIN/
+http://www.instructables.com/id/RFID-Controlled-Door/
+http://www.instructables.com/id/Arduino-RFID-Reader-MFRC522-Turorial/
+http://www.instructables.com/id/WiFi-RFID-Reader/
+https://github.com/hacklabnobo/esp8266_rfid/blob/master/RDM6300Test/RDM6300Test.ino
+
+*i2c LCD
+http://www.14core.com/wiring-i2c-module-on-16x2-lcd-with-sclsda/
+http://www.14core.com/wiring-nodemcu-esp8266-12e-with-i2c-16x2-lcd-screen/
+http://www.instructables.com/id/Using-a-Nodemcu-Devkit-esp8266-to-Display-Temperat/?ALLSTEPS
+
+
+#sql multiple insert
+insert into kpi_mech.mbcode_db (id, details) values ('1','THREAD SKIP, BROKEN STITCH'),
+('2','THREAD TIGHT / LOOSE TENSION'),
+('3','THREAD LOOSE STITCH'),
+('4','THREAD BREAKING'),
+('5','PACKERING, WAVE / STRETCH'),
+('6','TAPE UNEVEN SEAMMING'),
+('7','UNEVEN STITCHES'),
+('8','NEEDLE CUT, HOLE'),
+('9','NEEDLE BREAKING'),
+('10','UNEVEN SEAMMING'),
+('11','ROTARY HOOK STOCK-UP'),
+('12','POOR FEEDING'),
+('13','FEED DOG MARK'),
+('14','KNIFE SHARPENING'),
+('15','LOST SCREW , NUT'),
+('16','OIL STAIN, RUST STAIN'),
+('17','SPEED PROBLEM'),
+('18','WIRE BURNED MOTOR'),
+('19','ELECTRICAL PROBLEM'),
+('20','OTHER');
+
+#SQL find RFID tag
+SELECT ID, location FROM kpi_mech.task_db WHERE Assignee = 'jomar' AND Status = %lu ORDER BY Severity ASC limit 1;
+SELECT EmpNo FROM kpi_mech.user_db WHERE rfid = %lu;
+SELECT EmpNo FROM kpi_mech.user_db WHERE rfid = 7754087;
+
+#SQL insert new task
+insert into kpi_mech.task_db (EmpNo, Status, details) values (49,0,0);
+
+INSERT INTO `kpi_mech`.`task_db` (`ID`, `EmpNo`, `Severity`, `StartTime`, `EndTime`, `StartDate`, `EndDate`, `location`, `Assignee`, `Status`, `recorded`, `details`) VALUES (NULL, '49', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP, '0');
+
+#find unassigned task
+char QUERY_EMPID[] = "SELECT EmpNo, location FROM kpi_mech.user_db WHERE rfid = %lu; ";
+char QUERY_INSERT[] = "insert into kpi_mech.task_db (EmpNo, Status, details, location) values (%d, 0, %d, %d);";
+char QUERY_FNDTASK[] = "SELECT ID FROM kpi_mech.task_db WHERE Status = %d limit 1; ";
+char QUERY_FINDMECH[] = "SELECT empID FROM kpi_mech.mech_db WHERE status = %d limit 1 ; ";
+char QUERY_UPDATEMECH[] = "UPDATE kpi_mech.mech_db SET status = 1 WHERE empID = %d; ";
+char QUERY_UPDATETASK[] = "UPDATE kpi_mech.task_db SET Status = 1, Assignee = %d WHERE ID = %d; ";
+char query[350];
+
+
+#find cancelled task
+SELECT ID FROM kpi_mech.task_db WHERE Status = 5 limit 1;
+SELECT mech FROM kpi_mech.timeout_db WHERE taskID = %d;    //find who timeout
+SELECT empID FROM kpi_mech.mech_db WHERE status = 0 AND empID != 49 limit 1 ;
+SELECT empID FROM kpi_mech.mech_db WHERE status = 0 AND empID != %d limit 1 ;
+UPDATE kpi_mech.task_db SET Status = 1 Assignee = '%d' WHERE ID = %d;
+
+
+#find timeout task
+SELECT ID FROM kpi_mech.task_db WHERE Status = 6 limit 1;
+SELECT mech FROM kpi_mech.cancel_db WHERE taskID = %d;		//find not cancelled
+SELECT empID FROM kpi_mech.mech_db WHERE status = 0 AND mech != %d limit 1 ;
+UPDATE kpi_mech.task_db SET Status = 1 Assignee = '%d' WHERE ID = %d;
+
+
+#find finished task
+SELECT ID FROM kpi_mech.task_db WHERE Status = 3 ASC limit 1;
+UPDATE kpi_mech.task_db SET Status = 4 WHERE ID = %d;

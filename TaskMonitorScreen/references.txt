@@ -1,0 +1,15 @@
+#mariaDB
+sudo apt install mariadb-server
+https://www.stewright.me/2015/08/tutorial-install-apache-php-and-mysql-on-a-raspberry-pi-2/
+https://www.stewright.me/2016/03/turn-raspberry-pi-3-php-7-powered-web-server/
+https://www.server-world.info/en/note?os=Debian_8&p=mariadb&f=2
+
+https://www.howtoforge.com/tutorial/install-apache-with-php-and-mysql-lamp-on-debian-jessie/
+http://www.php5dp.com/basic-php-mysql-oop/
+
+#raspi / mariandb access
+https://www.raspberrypi.org/forums/viewtopic.php?f=36&t=20214
+
+
+#table:
+http://www.w3schools.com/php/php_mysql_select.asp
