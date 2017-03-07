@@ -26,6 +26,12 @@
 
 // constants won't change. They're used here to
 // set pin numbers:
+
+const int startButton = D1;
+const int cancelButton = D7;
+int buttonState1 = 1;
+int buttonState2 = 1;
+
 const int buttonPin = D7;     // the number of the pushbutton pin
 const int ledPin =  13;      // the number of the LED pin
 
@@ -38,12 +44,14 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   // initialize the pushbutton pin as an input:
   pinMode(buttonPin, INPUT_PULLUP);
+  attachInterrupt(buttonPin, startButtonChange, CHANGE);
+  
 }
 
 void loop() {
   // read the state of the pushbutton value:
-  buttonState = digitalRead(buttonPin);
-	delay(1000);
+  //buttonState = digitalRead(buttonPin);
+	delay(100);
   // check if the pushbutton is pressed.
   // if it is, the buttonState is HIGH:
   if (buttonState == HIGH) {
@@ -55,4 +63,10 @@ void loop() {
     digitalWrite(ledPin, LOW);
 	Serial.println("LOW");
   }
+}
+
+void startButtonChange() {
+	
+	buttonState = !buttonState;
+	
 }

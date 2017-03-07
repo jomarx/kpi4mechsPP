@@ -104,7 +104,7 @@ char password[] = "secret"; // MySQL user login password
 
 // Sample query
 //char query[] = "SELECT population FROM world.city WHERE name = 'New York'";
-char QUERY_POP[] = "SELECT ID, location FROM kpi_mech.task_db WHERE Assignee = %d AND Status = 1 ORDER BY Severity ASC limit 1; ";
+char QUERY_POP[] = "SELECT ID, location FROM kpi_mech.task_db WHERE NotifNo = %d AND Status = 1 ORDER BY Severity ASC limit 1; ";
 char QUERY_UPDATE_2[] = "UPDATE kpi_mech.task_db SET Status = 2 WHERE ID = %lu; ";
 char QUERY_UPDATE_3[] = "UPDATE kpi_mech.task_db SET Status = 3 WHERE ID = %lu; ";
 char QUERY_UPDATE_5[] = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = %lu; ";
@@ -177,7 +177,9 @@ int buttonState1 = 1;
 int buttonState2 = 1;
 
 //mechanic ID
-int mechanicID = 49;
+//static NotifNo that will be default per device.
+int mechanicID = 1;
+
 
 void setup(){  
 
@@ -397,7 +399,7 @@ do {
 conn.close();
 
 
-// Show the result
+// deep sleep for 15mins if no task
 if (cellLocation == 0) {
 	display.print("No task,\n sleeping for 15mins");
 	Serial.println("No task,\n sleeping for 15mins");
