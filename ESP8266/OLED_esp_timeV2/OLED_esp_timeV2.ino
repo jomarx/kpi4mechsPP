@@ -180,6 +180,8 @@ int buttonState2 = 1;
 //static NotifNo that will be default per device.
 int mechanicID = 1;
 
+//ElapsedTime = time elpsed since start
+int ElapsedTime = 0;
 
 void setup(){  
 
@@ -458,7 +460,7 @@ while (TNLeaveLoop < 1) {
 	if (buttonState1 == LOW && buttonState2 == HIGH){
 		SQLserverConnect();
 		Serial.println("Starting task, update DB");
-		displayClear();
+		ElapsedTime=0;
 		Serial.print("start task!!");
 		//SQL start
 		//row_values *row = NULL;
@@ -489,6 +491,9 @@ while (TNLeaveLoop < 1) {
 		
 		buzzerFunction(2);
 		
+				
+			displayClear();
+						
 			if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
 			if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
 			if(ns < 10) display.print(F("0")); display.print(ns);                       // print the second
@@ -513,6 +518,7 @@ while (TNLeaveLoop < 1) {
 		for (int tempTimer = 0;tempTimer <= 3;tempTimer++)  {
 			//buttonState1 = digitalRead(startButton);
 			delay(200);
+			
 			if (buttonState1 == HIGH){
 				tempTimer = 0;
 			}
@@ -523,7 +529,23 @@ while (TNLeaveLoop < 1) {
 			if (countToMinute > 300){
 				buzzerFunction(1);
 				countToMinute = 0;
+				ElapsedTime=ElapsedTime+1;
+				
+				displayClear();
+				display.print("Start time: ");
+				if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
+				if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
+				if(ns < 10) display.print(F("0")); display.print(ns);
+				display.println();
+				display.print("Elapsed Time: "); display.print(ElapsedTime); display.print("mins");
+				display.println();
+				display.print("Sew Line #: ");
+				display.print(cellLocation);
+				display.println();
+				display.print("<Task Done>");
+				display.display();
 			}
+			
 			Serial.print("countToMinute : ");
 			Serial.print(countToMinute);
 			Serial.print("\n");
