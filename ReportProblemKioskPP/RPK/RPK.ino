@@ -22,7 +22,8 @@ char QUERY_FNDTTASK[] = "SELECT mech FROM kpi_mech.timeout_db WHERE taskID = %d;
 char QUERY_FINDMECH[] = "SELECT empID FROM kpi_mech.mech_db WHERE status = %d limit 1 ; ";
 char QUERY_FINDCMECH[] = "SELECT empID FROM kpi_mech.mech_db WHERE status = 0 AND empID != %d limit 1 ; ";
 char QUERY_UPDATEMECH[] = "UPDATE kpi_mech.mech_db SET status = 1 WHERE empID = %d; ";
-char QUERY_UPDATETASK[] = "UPDATE kpi_mech.task_db SET Status = 1, Assignee = %d WHERE ID = %d; ";
+char QUERY_UPDATETASK[] = "UPDATE kpi_mech.task_db SET BreakStartTime = (Curtime()), Status = 1, Assignee = %d WHERE ID = %d; ";
+char QUERY_UPDATETASK1[] = "UPDATE kpi_mech.task_db SET BreakStartTime = (Curtime()), Status = 1, Assignee = %d WHERE ID = %d; insert into kpi_mech.mbreak_db (SpecialSerial, StartTime, TaskID) values (%d, (Curtime()), %d);";
 char query[350];
 
 WiFiClient client;
@@ -68,6 +69,20 @@ int countToloop = 0;
 
 //selector assign
 int AssignSelect = 0;
+
+//2nd Function Enable/disable
+//1 = enabled
+//2 = disabled
+int AssignFunction = 1;
+int AssignFunctionOnly = 1;
+
+//2nd Function Enable/disable
+//1 = enabled
+//2 = disabled
+int RFIDFunction = 1;
+
+//SpecialSerial
+int SpecialSerial = 123;
 
 void setup() {
 
@@ -119,6 +134,9 @@ while (WiFi.status() != WL_CONNECTED) {
 
 	pinMode(startButton, INPUT_PULLUP);
 	pinMode(cancelButton, INPUT_PULLUP);
+	
+	attachInterrupt(startButton, startButtonChange, CHANGE);
+	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
 
   Serial.println("");
   Serial.println("WiFi connected");  
@@ -163,7 +181,7 @@ void loop(){
   int tempTimer = 0;
   int cellLocation = 0;
 
-	delay (100);
+	delay (500);
     Serial.print("Start loop / "); 
 	Serial.print(countToTwo); 
 	Serial.print(" / ");
@@ -173,7 +191,7 @@ void loop(){
 
 	
 	//Reading from RFID
-if (rfidReader.available() > 0){
+if (rfidReader.available() > 0 && RFIDFunction == 1){
     	int BytesRead = rfidReader.readBytesUntil(3, tagNumber, 15);//EOT (3) is the last character in tag 
     receivedTag=true;
 	buzzerFunction(1);
@@ -247,8 +265,8 @@ if (rfidReader.available() > 0){
 		delay (2000);
 		
 			while (TNLeaveLoop < 1) {
-				buttonState1 = digitalRead(startButton);
-				buttonState2 = digitalRead(cancelButton);
+				//buttonState1 = digitalRead(startButton);
+				//buttonState2 = digitalRead(cancelButton);
 				potVal = analogRead(potPin);    // read the potValue from the sensor
 				
 				if (potVal > 100 && potVal < 286) {mbdc=1;}
@@ -365,7 +383,11 @@ if (rfidReader.available() > 0){
 
   delay(400);
   
-  if (countToTwo > 120 && AssignSelect == 0 ){
+  if (AssignFunctionOnly == 1){
+	  countToTwo = countToTwo + 80;
+  }
+  
+  if (countToTwo > 120 && AssignSelect == 0 && AssignFunction == 1){
 	
 	buzzerFunction(2);
 	ClearLCD();
@@ -424,7 +446,7 @@ if (rfidReader.available() > 0){
 			MySQL_Cursor *cur_mem5 = new MySQL_Cursor(&conn);
 		Serial.println("SQL query updating task");
 		// Initiate the query class instance
-		sprintf(query, QUERY_UPDATETASK, mechID, taskID);
+		sprintf(query, QUERY_UPDATETASK1, mechID, taskID, SpecialSerial, taskID);
 			cur_mem5->execute(query);
 			Serial.println("task_db updated!");
 		delay(500);
@@ -455,7 +477,7 @@ if (rfidReader.available() > 0){
 	}
 	
 	//find cancelled task and auto assign
-	 if (countToTwo > 240 && AssignSelect == 1){
+	 if (countToTwo > 240 && AssignSelect == 1 && AssignFunction == 1){
 	
 	buzzerFunction(2);
 	ClearLCD();
@@ -568,7 +590,7 @@ if (rfidReader.available() > 0){
 	}
 	
 	//find timeout task
-	if (countToTwo > 460 && AssignSelect == 2){
+	if (countToTwo > 460 && AssignSelect == 2 && AssignFunction == 1){
 	
 	buzzerFunction(2);
 	ClearLCD();
@@ -739,4 +761,16 @@ while (conn.connect(server_addr, 3306, user, spassword) != true) {
 	
     }
 	Serial.println( "connected again!" );
+}
+
+void startButtonChange() {
+	
+	buttonState1 = 0;
+	
+}
+
+void cancelButtonChange() {
+	
+	buttonState2 = 0;
+	
 }

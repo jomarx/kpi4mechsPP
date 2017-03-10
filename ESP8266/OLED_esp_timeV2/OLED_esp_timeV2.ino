@@ -764,13 +764,13 @@ while (conn.connect(server_addr, 3306, user, password) != true) {
 
 void startButtonChange() {
 	
-	buttonState1 = !buttonState1;
+	buttonState1 = 0;
 	
 }
 
 void cancelButtonChange() {
 	
-	buttonState2 = !buttonState2;
+	buttonState2 = 0;
 	
 }
 

@@ -69,6 +69,11 @@ int countToloop = 0;
 //selector assign
 int AssignSelect = 0;
 
+//2nd Function Enable/disable
+// 1 = auto assign / timeout / cancel tasks
+// 0 = disabled
+int AssignFunction = 0;
+
 void setup() {
 
   delay(1000);
@@ -163,7 +168,7 @@ void loop(){
   int tempTimer = 0;
   int cellLocation = 0;
 
-	delay (100);
+	delay (500);
     Serial.print("Start loop / "); 
 	Serial.print(countToTwo); 
 	Serial.print(" / ");
@@ -365,7 +370,7 @@ if (rfidReader.available() > 0){
 
   delay(400);
   
-  if (countToTwo > 120 && AssignSelect == 0 ){
+  if (countToTwo > 120 && AssignSelect == 0 && AssignFunction == 1){
 	
 	buzzerFunction(2);
 	ClearLCD();
@@ -455,7 +460,7 @@ if (rfidReader.available() > 0){
 	}
 	
 	//find cancelled task and auto assign
-	 if (countToTwo > 240 && AssignSelect == 1){
+	 if (countToTwo > 240 && AssignSelect == 1 && AssignFunction == 1){
 	
 	buzzerFunction(2);
 	ClearLCD();
@@ -568,7 +573,7 @@ if (rfidReader.available() > 0){
 	}
 	
 	//find timeout task
-	if (countToTwo > 460 && AssignSelect == 2){
+	if (countToTwo > 460 && AssignSelect == 2 && AssignFunction == 1){
 	
 	buzzerFunction(2);
 	ClearLCD();
