@@ -14,17 +14,18 @@ char user[] = "nodemcu1"; // MySQL user login username
 char spassword[] = "secret"; // MySQL user login password
 
 // Sample query
+char QUERY_SMID[] = "SELECT SpecialSerial, RFID FROM kpi_mech.sm_db WHERE RFID = %lu; ";
 char QUERY_EMPID[] = "SELECT EmpNo, location FROM kpi_mech.user_db WHERE rfid = %lu; ";
-char QUERY_INSERT[] = "insert into kpi_mech.task_db (EmpNo, Status, details, location) values (%d, 0, %d, %d);";
-char QUERY_FNDTASK[] = "SELECT ID FROM kpi_mech.task_db WHERE Status = %d limit 1; ";
+char QUERY_INSERT[] = "insert into kpi_mech.task_db (EmpNo, Status, details, SpecialSerial, location, StartDate, BreakStartTime) values (%d, 0, %d, %d, 1, (now()),(Curtime()));";
+char QUERY_FNDTASK[] = "SELECT ID, SpecialSerial FROM kpi_mech.task_db WHERE Status = %d limit 1; ";
 char QUERY_FNDCTASK[] = "SELECT mech FROM kpi_mech.cancel_db WHERE taskID = %d; ";
 char QUERY_FNDTTASK[] = "SELECT mech FROM kpi_mech.timeout_db WHERE taskID = %d; ";
-char QUERY_FINDMECH[] = "SELECT empID FROM kpi_mech.mech_db WHERE status = %d limit 1 ; ";
-char QUERY_FINDCMECH[] = "SELECT empID FROM kpi_mech.mech_db WHERE status = 0 AND empID != %d limit 1 ; ";
+char QUERY_FINDMECH[] = "SELECT empID, NotifNo FROM kpi_mech.mech_db WHERE status = %d limit 1 ; ";
+char QUERY_FINDCMECH[] = "SELECT empID, NotifNo FROM kpi_mech.mech_db WHERE status = 0 AND empID != %d limit 1 ; ";
 char QUERY_UPDATEMECH[] = "UPDATE kpi_mech.mech_db SET status = 1 WHERE empID = %d; ";
-char QUERY_UPDATETASK[] = "UPDATE kpi_mech.task_db SET BreakStartTime = (Curtime()), Status = 1, Assignee = %d WHERE ID = %d; ";
-char QUERY_UPDATETASK1[] = "UPDATE kpi_mech.task_db SET BreakStartTime = (Curtime()), Status = 1, Assignee = %d WHERE ID = %d; insert into kpi_mech.mbreak_db (SpecialSerial, StartTime, TaskID) values (%d, (Curtime()), %d);";
-char query[350];
+char QUERY_UPDATETASK[] = "UPDATE kpi_mech.task_db SET location = 1, Status = 1, NotifNo = %d, Assignee = %d WHERE ID = %d; ";
+char QUERY_UPDATETASK1[] = "UPDATE kpi_mech.task_db SET location = 1, Status = 1, NotifNo = %d, Assignee = %d WHERE ID = %d; insert into kpi_mech.mbreak_db (SpecialSerial, StartDate, TaskID) values (%d, (now()), %d);";
+char query[256];
 
 WiFiClient client;
 MySQL_Connection conn((Client *)&client);
@@ -74,7 +75,9 @@ int AssignSelect = 0;
 //1 = enabled
 //2 = disabled
 int AssignFunction = 1;
+//shorter delay to get to assign function
 int AssignFunctionOnly = 1;
+const int AssignFunctionOnlyButton = D5;
 
 //2nd Function Enable/disable
 //1 = enabled
@@ -82,7 +85,22 @@ int AssignFunctionOnly = 1;
 int RFIDFunction = 1;
 
 //SpecialSerial
-int SpecialSerial = 123;
+int SpecialSerial = 0;
+
+//to get out of Machine RFID check loop
+int SmRfidDone = 0;
+
+//result temp
+unsigned long result = 0;
+
+int BytesRead = 0;
+
+int NotifNo = 0;
+
+int taskID = 0;
+int mechID = 0;
+int CmechID = 0;
+int TmechID = 0;
 
 void setup() {
 
@@ -134,7 +152,8 @@ while (WiFi.status() != WL_CONNECTED) {
 
 	pinMode(startButton, INPUT_PULLUP);
 	pinMode(cancelButton, INPUT_PULLUP);
-	
+	pinMode(AssignFunctionOnlyButton, INPUT);
+		
 	attachInterrupt(startButton, startButtonChange, CHANGE);
 	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
 
@@ -167,13 +186,17 @@ while (conn.connect(server_addr, 3306, user, spassword) != true) {
   ClearLCD();
   lcd.setCursor(0,0);
   lcd.print("SQL connected");
-  delay(2000);
+  delay(1000);
 	ClearLCD();
 	lcd.print("Please Scan ID");
 
 }
 
 void loop(){
+	
+	//reset button state
+	buttonState1 = 1;
+	buttonState2 = 1;
 
   receivedTag=false;
   int TNLeaveLoop = 0;
@@ -192,29 +215,47 @@ void loop(){
 	
 	//Reading from RFID
 if (rfidReader.available() > 0 && RFIDFunction == 1){
-    	int BytesRead = rfidReader.readBytesUntil(3, tagNumber, 15);//EOT (3) is the last character in tag 
-    receivedTag=true;
+	BytesRead = rfidReader.readBytesUntil(3, tagNumber, 15);//EOT (3) is the last character in tag 
+    
 	buzzerFunction(1);
-	Serial.println("Got a tag");    
-	rfidReader.flush(); 
+	Serial.println("Got a tag");   
+	delay(100);
+	
+	while (rfidReader.available() > 0) {
+		rfidReader.read();
+	}
+	
+	delay(100);
+	
+	tagString=tagNumber;
+	Serial.println();
+    Serial.print("Tag Number1: ");
+    Serial.println(tagString);
+    tagString.substring(3,11).toCharArray(realTagNum, sizeof(realTagNum));
+    Serial.println(realTagNum);
+    result = hex2int(realTagNum, 8);
+    Serial.println(result);
+	
+	if (result <= 0 || tagNumber <= 0) {
+		receivedTag=false;
+		Serial.print("receivedTag: false");
+	} else {
+		receivedTag=true;
+		Serial.print("receivedTag: true");
+	}
 }
 	
   	
   if (receivedTag){
-	  
+	
+	lcd.backlight();
+	ClearLCD();
+	lcd.print("Checking ID Tag");
+	
 	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
 	SQLserverConnect();	
     tagString=tagNumber;
-    
-    Serial.println();
-    Serial.print("Tag Number: ");
-    Serial.println(tagString);
-    tagString.substring(3,11).toCharArray(realTagNum, sizeof(realTagNum));
-    Serial.println(realTagNum);
-    unsigned long result = hex2int(realTagNum, 8);
-    
-    Serial.println(result);
-    
+        
 	delay(500);
 	row_values *row = NULL;
 	Serial.println("SQL query to search for RFID");
@@ -223,14 +264,13 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 	sprintf(query, QUERY_EMPID, result);
 	// Execute the query
 	cur_mem->execute(query);
+	Serial.print("value of char = ");
+	Serial.println(query);
 	// Fetch the columns (required) but we don't use them.
 	column_names *columns = cur_mem->get_columns();
 	// Read the row (we are only expecting the one)
 		
-		lcd.backlight();
-		ClearLCD();
-		lcd.print("Checking ID Tag");
-	
+		
 	do {
 		row = cur_mem->get_next_row();
 		if (row != NULL) {
@@ -251,8 +291,107 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 	  
 	  //LCD
 		ClearLCD();
-		lcd.print("RFID allowed");
+		lcd.print("User RFID allowed");
 		delay(3000);
+		
+		ClearLCD();
+		lcd.print("Scan Machine ID");
+		Serial.println("Scan Machine ID");
+		delay(3000);
+		receivedTag=false;
+		result=0;
+		
+		//check RFID if valid machine
+		do {
+			if (rfidReader.available() > 0){
+				BytesRead = rfidReader.readBytesUntil(3, tagNumber, 15);//EOT (3) is the last character in tag 
+				buzzerFunction(1);
+				Serial.println("Got Machine tag");    
+				delay(1);
+				
+				while (rfidReader.available() > 0) {
+					rfidReader.read();
+				}
+				delay(1);
+				
+				tagString=tagNumber;
+				Serial.println();
+				Serial.print("Tag Number: ");
+				Serial.println(tagString);
+				tagString.substring(3,11).toCharArray(realTagNum, sizeof(realTagNum));
+				Serial.println(realTagNum);
+				result = hex2int(realTagNum, 8);
+				//tag number
+				Serial.println(result);
+				
+				if (result <= 0) {
+					receivedTag=false;
+					} else {
+						receivedTag=true;
+						}
+			}
+			
+			if (receivedTag){
+				
+				MySQL_Cursor *cur_mem11 = new MySQL_Cursor(&conn);
+				SQLserverConnect();	
+				tagString=tagNumber;
+				EmpCd = 0;
+    
+				delay(500);
+				row_values *row = NULL;
+				Serial.println("SQL query to search for Machine RFID");
+				// Initiate the query class instance
+				//MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
+				sprintf(query, QUERY_SMID, result);
+				// Execute the query
+				cur_mem11->execute(query);
+				Serial.print("value of char = ");
+				Serial.println(query);
+				// Fetch the columns (required) but we don't use them.
+				column_names *columns = cur_mem11->get_columns();
+				// Read the row (we are only expecting the one)
+					
+					lcd.backlight();
+					ClearLCD();
+					lcd.print("Checking ID Tag");
+				
+				do {
+					row = cur_mem11->get_next_row();
+					if (row != NULL) {
+						EmpCd = atol(row->values[0]);
+						Serial.print("value of SpecialSerial = ");
+						Serial.println(EmpCd);
+						SpecialSerial=EmpCd;
+						cellLocation = atol(row->values[1]);
+						Serial.print("value of RFID = ");
+						Serial.println(cellLocation);
+					}
+				} while (row != NULL);
+				// Deleting the cursor also frees up memory used
+				//delete cur_mem;
+				//conn.close();
+				
+				if (EmpCd != 0) {
+					Serial.println("Machine ID OK");
+					delay(3000);
+					SmRfidDone = 1;
+				} else {
+					Serial.println("RFID is not allowed");
+					ClearLCD();
+					lcd.print("ID is not allowed");
+					delay(3000);
+					ClearLCD();
+					lcd.print("Scan Machine ID");
+					result=0;
+					receivedTag=0;
+				} 
+			}
+			
+		delay (200);
+		Serial.print("1");
+		} while (SmRfidDone != 1);
+		//end rfid check
 		
 		ClearLCD();
 		//put Emp# check here
@@ -265,6 +404,7 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		delay (2000);
 		
 			while (TNLeaveLoop < 1) {
+				
 				//buttonState1 = digitalRead(startButton);
 				//buttonState2 = digitalRead(cancelButton);
 				potVal = analogRead(potPin);    // read the potValue from the sensor
@@ -304,6 +444,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 						sprintf(query, QUERY_INSERT, EmpCd, mbdc, cellLocation);
 						// Execute the query
 						cur_mem2->execute(query);
+						Serial.print("value of char = ");
+						Serial.println(query);
 						delay(500);
 						//delete cur_mem;
 						//conn.close();
@@ -316,10 +458,12 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 						TNLeaveLoop = 2;
 						delay (2000);
 						result = 0;
-						mbdc = 0;
+						mbdc = 1;
 						EmpCd = 0;
 						ClearLCD();
 						lcd.print("Please Scan ID");
+						
+						buttonState1=1;
 				}
 				
 				if (buttonState1 == HIGH && buttonState2 == LOW){
@@ -334,6 +478,7 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 						EmpCd = 0;
 						ClearLCD();
 						lcd.print("Please Scan ID");
+						buttonState2=1;
 				}
 				
 				if (countToFive > 6000 ){
@@ -372,19 +517,29 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		delay(3000);
 		ClearLCD();
 		lcd.print("Please Scan ID");
+		result=0;
+		receivedTag=0;
+		
     }
     
     memset(tagNumber,0,sizeof(tagNumber)); //erase tagNumber
     // this clears the rest of data on the serial, to prevent multiple scans
-    while (Serial.read() >= 0) {
-      Serial.flush(); // trying
-    }
+    
+	while (rfidReader.available() > 0) {
+		rfidReader.read();
+	}
+	  
+	  delay(100);
+    
   }
 
   delay(400);
   
-  if (AssignFunctionOnly == 1){
-	  countToTwo = countToTwo + 80;
+  AssignFunctionOnly = analogRead(AssignFunctionOnlyButton);
+  if (AssignFunctionOnly > 0){
+	  Serial.print("AssignFunctionOnly : ");
+	  Serial.println(AssignFunctionOnly);
+	  countToTwo = countToTwo + 40;
   }
   
   if (countToTwo > 120 && AssignSelect == 0 && AssignFunction == 1){
@@ -397,17 +552,19 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		
 	//SQL start
 		SQLserverConnect();	
-		int taskID = 0;
-		int mechID = 0;
+		taskID = 0;
+		mechID = 0;
 		//char taskID
 		delay(500);
 		row_values *row = NULL;
 		MySQL_Cursor *cur_mem3 = new MySQL_Cursor(&conn);
-		Serial.println("SQL query finding new task");
+		Serial.println("SQL query finding new task - test");
 		// Initiate the query class instance
 		sprintf(query, QUERY_FNDTASK, 0);
 		// Execute the query
 			cur_mem3->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		// Fetch the columns (required) but we don't use them.
 	
 		column_names *columns = cur_mem3->get_columns();
@@ -418,9 +575,12 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		taskID = atol(row->values[0]);
 		Serial.print("value of taskID = ");
 		Serial.println(taskID);
+		SpecialSerial = atol(row->values[1]);
+		Serial.print("value of SpecialSerial = ");
+		Serial.println(SpecialSerial);
 		}
 	} while (row != NULL);
-	
+		
 	if (taskID != 0) {
 	
 		delay(500);	
@@ -428,15 +588,20 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		Serial.println("SQL query finding available mech");
 		sprintf(query, QUERY_FINDMECH, 0);
 			cur_mem4->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		
 		column_names *column = cur_mem4->get_columns();
-			
+
 		do {
 			row = cur_mem4->get_next_row();
 			if (row != NULL) {
 				mechID = atol(row->values[0]);
 				Serial.print("value of mechID = ");
 				Serial.println(mechID);
+				NotifNo = atol(row->values[1]);
+				Serial.print("value of NotifNo = ");
+				Serial.println(NotifNo);
 			}
 		} while (row != NULL);
 	
@@ -444,14 +609,18 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 				
 		if (mechID != 0) {
 			MySQL_Cursor *cur_mem5 = new MySQL_Cursor(&conn);
-		Serial.println("SQL query updating task");
+		Serial.println("First SQL query updating task");
 		// Initiate the query class instance
-		sprintf(query, QUERY_UPDATETASK1, mechID, taskID, SpecialSerial, taskID);
+		sprintf(query, QUERY_UPDATETASK1, NotifNo, mechID, taskID, SpecialSerial, taskID);
 			cur_mem5->execute(query);
-			Serial.println("task_db updated!");
-		delay(500);
+			Serial.print("value of char = ");
+			Serial.println(query);
+			Serial.println("task_db/mbreak_db updated!");
+		delay(500); //find mech
 		sprintf(query, QUERY_UPDATEMECH, mechID);
 			cur_mem5->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 			Serial.println("mech_db updated!");
 			
 			ClearLCD();
@@ -487,9 +656,9 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 	
 	//SQL start
 		SQLserverConnect();	
-		int taskID = 0;
-		int mechID = 0;
-		int CmechID = 0;
+		taskID = 0;
+		mechID = 0;
+		CmechID = 0;
 		//char taskID
 		delay(500);
 		row_values *row = NULL;
@@ -499,6 +668,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		sprintf(query, QUERY_FNDTASK, 5);
 		// Execute the query
 			cur_mem31->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		// Fetch the columns (required) but we don't use them.
 	
 		column_names *columns = cur_mem31->get_columns();
@@ -522,6 +693,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		sprintf(query, QUERY_FNDCTASK, taskID);
 		// Execute the query
 			cur_mem312->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		// Fetch the columns (required) but we don't use them.
 	
 		column_names *column = cur_mem312->get_columns();
@@ -540,6 +713,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		Serial.println("SQL query finding available mech NOT CmechID");
 		sprintf(query, QUERY_FINDCMECH, CmechID);
 			cur_mem4->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		
 		column_names *column1 = cur_mem4->get_columns();
 			
@@ -549,6 +724,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 				mechID = atol(row->values[0]);
 				Serial.print("value of mechID = ");
 				Serial.println(mechID);
+				Serial.print("value of NotifNo = ");
+				Serial.println(NotifNo);
 			}
 		} while (row != NULL);
 	
@@ -558,12 +735,16 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 			MySQL_Cursor *cur_mem5 = new MySQL_Cursor(&conn);
 		Serial.println("SQL query updating task");
 		// Initiate the query class instance
-		sprintf(query, QUERY_UPDATETASK, mechID, taskID);
+		sprintf(query, QUERY_UPDATETASK, NotifNo, mechID, taskID);
 			cur_mem5->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 			Serial.println("task_db updated!");
-		delay(500);
+		delay(500); //find cmech
 		sprintf(query, QUERY_UPDATEMECH, mechID);
 			cur_mem5->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 			Serial.println("mech_db updated!");
 			
 			ClearLCD();
@@ -600,9 +781,9 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 	
 	//SQL start
 		SQLserverConnect();	
-		int taskID = 0;
-		int mechID = 0;
-		int TmechID = 0;
+		taskID = 0;
+		mechID = 0;
+		TmechID = 0;
 		//char taskID
 		delay(500);
 		row_values *row = NULL;
@@ -612,6 +793,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		sprintf(query, QUERY_FNDTASK, 6);
 		// Execute the query
 			cur_mem31->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		// Fetch the columns (required) but we don't use them.
 	
 		column_names *columns1 = cur_mem31->get_columns();
@@ -634,6 +817,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		sprintf(query, QUERY_FNDTTASK, taskID);
 		// Execute the query
 			cur_mem312->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		// Fetch the columns (required) but we don't use them.
 	
 		column_names *column2 = cur_mem312->get_columns();
@@ -652,6 +837,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 		Serial.println("SQL query finding available mech NOT TmechID");
 		sprintf(query, QUERY_FINDCMECH, TmechID);
 			cur_mem4->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 		
 		column_names *column12 = cur_mem4->get_columns();
 			
@@ -661,6 +848,8 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 				mechID = atol(row->values[0]);
 				Serial.print("value of mechID = ");
 				Serial.println(mechID);
+				Serial.print("value of NotifNo = ");
+				Serial.println(NotifNo);
 			}
 		} while (row != NULL);
 	
@@ -670,12 +859,16 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 			MySQL_Cursor *cur_mem5 = new MySQL_Cursor(&conn);
 		Serial.println("SQL query updating task");
 		// Initiate the query class instance
-		sprintf(query, QUERY_UPDATETASK, mechID, taskID);
+		sprintf(query, QUERY_UPDATETASK, NotifNo, mechID, taskID);
 			cur_mem5->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 			Serial.println("task_db updated!");
 		delay(500);
 		sprintf(query, QUERY_UPDATEMECH, mechID);
 			cur_mem5->execute(query);
+			Serial.print("value of char = ");
+			Serial.println(query);
 			Serial.println("mech_db updated!");
 			
 			ClearLCD();
@@ -720,6 +913,7 @@ if (rfidReader.available() > 0 && RFIDFunction == 1){
 	}
 	
 	countToloop++;
+	yield();
   
 }
 

@@ -110,8 +110,8 @@ char QUERY_UPDATE_3[] = "UPDATE kpi_mech.task_db SET Status = 3 WHERE ID = %lu; 
 char QUERY_UPDATE_5[] = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = %lu; ";
 char QUERY_UPDATE_6[] = "UPDATE kpi_mech.task_db SET Status = 6 WHERE ID = %lu; ";
 char QUERY_STARTTIME[] = "UPDATE kpi_mech.task_db SET StartTime = (Curtime()) WHERE ID = %lu; ";
-char QUERY_ENDTIME[] = "UPDATE kpi_mech.task_db SET EndTime = (Curtime()) WHERE ID = %lu; ";
-char QUERY_AVAILABLE[] = "UPDATE kpi_mech.mech_db SET status = 0 WHERE empID = %d; ";
+char QUERY_ENDTIME[] = "UPDATE kpi_mech.task_db SET EndTime = (Curtime()), EndDate = (now()) WHERE ID = %lu; ";
+char QUERY_AVAILABLE[] = "UPDATE kpi_mech.mech_db SET status = 0 WHERE mechanicID = %d; UPDATE kpi_mech.mbreak_db SET EndDate = (now()) WHERE TaskID = %d;";
 char QUERY_CANCELLED[] = "insert into kpi_mech.cancel_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime()); ";
 char QUERY_TIMEOUT[] = "insert into kpi_mech.timeout_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime()); ";
 char query[256];
@@ -268,6 +268,11 @@ display.display();
 }
 
 void loop(){
+
+//reset button values	
+buttonState1 = 1;
+buttonState2 = 1;
+	
 //NTP start
 //get a random server from the pool
 //WiFi.hostByName(ntpServerName, timeServerIP); 
@@ -514,6 +519,7 @@ while (TNLeaveLoop < 1) {
 			display.print("<Task Done>");
 			display.display();
 		
+		buttonState1 = HIGH; //reset button status
 		Serial.print("starting loop to wait to finish task");
 		for (int tempTimer = 0;tempTimer <= 3;tempTimer++)  {
 			//buttonState1 = digitalRead(startButton);
@@ -580,7 +586,7 @@ while (TNLeaveLoop < 1) {
 		// Execute the query
 		cur_mem2->execute(query);
 		delay(500);
-		sprintf(query, QUERY_AVAILABLE, mechanicID);
+		sprintf(query, QUERY_AVAILABLE, mechanicID, taskID);
 		Serial.println("sql to update mech availability");
 		cur_mem2->execute(query);
 		//delete cur_mem;
@@ -588,7 +594,9 @@ while (TNLeaveLoop < 1) {
 		buzzerFunction(2);
 		conn.close();
 		TNLeaveLoop = 2;
+		buttonState2 == HIGH;
 	}
+	
 	if (buttonState1 == HIGH && buttonState2 == LOW){
 		//SQL start
 		//row_values *row = NULL;
@@ -607,7 +615,7 @@ while (TNLeaveLoop < 1) {
 		// Execute the query
 		cur_mem3->execute(query);
 		delay(500);
-		sprintf(query, QUERY_AVAILABLE, mechanicID);
+		sprintf(query, QUERY_AVAILABLE, mechanicID, taskID);
 		Serial.println("sql to update mech availability");
 		cur_mem3->execute(query);
 		// SQL end
@@ -689,7 +697,7 @@ while (TNLeaveLoop < 1) {
 }
 
   	Serial.println("out of loop");
-	displayClear();
+	//displayClear();
 	
 //reset button state
 buttonState1 = 1;
@@ -697,7 +705,7 @@ buttonState2 = 1;
 
   //sleep for 1min
   //ESP.deepSleep(60000000);
-  delayer(60);
+  //delayer(60);
   	ESP.restart();
   
 }
