@@ -109,8 +109,8 @@ SSD1306 display(0x3c, 4, 5);
 #include <MySQL_Cursor.h>
 
 
-//IPAddress server_addr(192,168,143,132); // IP of the MySQL server here
-IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
+IPAddress server_addr(192,168,143,200); // IP of the MySQL server here
+//IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 
@@ -137,10 +137,10 @@ MySQL_Connection conn((Client *)&client);
 
 
 //wifi
-//char ssid[] = "outsourcing1.25s"; // your SSID
-//char pass[] = "dbafe12345!!!"; // your SSID Password
-char ssid[] = "jomarAP-SP";  //  your network SSID (name)
-char pass[] = "maquinay1";       // your network password
+char ssid[] = "outsourcing1.25s"; // your SSID
+char pass[] = "dbafe12345!!!"; // your SSID Password
+//char ssid[] = "jomarAP-SP";  //  your network SSID (name)
+//char pass[] = "maquinay1";       // your network password
 // const char* host = "utcnist2.colorado.edu";
 //const char* host = "128.138.141.172";
 const char* host = "192.168.42.85"; //laptop NTP server
@@ -181,6 +181,7 @@ WiFiUDP udp;
 
 //buzzer
 const int buzzer = 2;
+const int buzzer2 = 16;
 
 //button
 const int startButton = 14;
@@ -256,8 +257,8 @@ display.clear();
 Serial.println("");
 
 displayClear();
-display.print("WIFI Connected!\n");
-display.print(WiFi.localIP());
+display.setTextAlignment(TEXT_ALIGN_CENTER);
+display.drawString(64, 22, "WIFI: Connecting");
 display.print("\n");
 display.display();
 
@@ -271,10 +272,13 @@ udp.begin(localPort);
 Serial.print("Local port: ");
 Serial.println(udp.localPort());
 //end NTP
+
+displayClear();
  
 //start SQL DB connection
 Serial.println("DB - Connecting...");
-display.print("DB - Connecting\n");
+display.setTextAlignment(TEXT_ALIGN_CENTER);
+display.drawString(64, 22, "DB: Connecting");
 display.display();
 
 ResetCounter = 0;
@@ -284,13 +288,18 @@ while (conn.connect(server_addr, 3306, user, password) != true) {
     Serial.print(ResetCounter);
     ResetCounter++;
     if (ResetCounter >= 60) {
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 22, "DB: Cant connect \n Resetting");
 		Serial.print("SQL cannot connect");
 		Serial.print("ESP8266 reset!");
 		ESP.restart();
       }
     }
-    
-display.print("SQL connected!\n");
+
+displayClear();
+display.setTextAlignment(TEXT_ALIGN_LEFT);
+display.setFont(ArialMT_Plain_10);
+display.drawString(0, 0, "SQL connected!\n");
 display.display();
 }
 
@@ -303,11 +312,11 @@ buttonState2 = 1;
 //NTP start
 //get a random server from the pool
 //WiFi.hostByName(ntpServerName, timeServerIP); 
-IPAddress timeServerIP(192, 168, 42, 85); //local IP address for NTP server
+IPAddress timeServerIP(192, 168, 143, 1); //local IP address for NTP server
 
 sendNTPpacket(timeServerIP); // send an NTP packet to a time server
 // wait to see if a reply is available
-delay(500);
+delay(1000);
   
 int cb = udp.parsePacket();
   if (!cb) {
@@ -435,7 +444,9 @@ conn.close();
 
 // deep sleep for 15mins if no task
 if (cellLocation == 0) {
-	display.print("No task,\n sleeping for 15mins");
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(64, 22, "No task,\n sleeping for 15mins");
 	Serial.println("No task,\n sleeping for 15mins");
 	display.display();
 	buzzerFunction(1);
@@ -465,6 +476,7 @@ long countToFifteenAgain = 0;
 int countToMinute = 0;
 int MinLeft = 15;
 
+/*
 Serial.println("Starting loop, printing initial display");
 displayClear();
 if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
@@ -482,6 +494,16 @@ display.print("ACK Time left : ");
 display.print(MinLeft);
 display.print("\n");
 display.print("START           END");
+*/
+
+displayClear();
+display.setTextAlignment(TEXT_ALIGN_LEFT);
+display.setFont(ArialMT_Plain_10);
+display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
+display.drawString(0, 10, "Sew Line # " + String(cellLocation));
+display.drawString(0, 20, "ACK Time left :" + String(MinLeft));
+display.drawString(0, 30, "START           END");
+
 display.display();
 buzzerFunction(5);
  
@@ -525,7 +547,7 @@ while (TNLeaveLoop < 1) {
 		
 				
 			displayClear();
-						
+			/*			
 			if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
 			if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
 			if(ns < 10) display.print(F("0")); display.print(ns);                       // print the second
@@ -542,8 +564,10 @@ while (TNLeaveLoop < 1) {
 			if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
 			if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
 			if(ns < 10) display.print(F("0")); display.print(ns);
-			display.print("\n");
-			display.print("<Task Done>");
+			display.print("\n*/
+			display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
+			display.drawString(0, 10, "Sew Line # " + String(cellLocation));
+			display.drawString(0, 30, "<Task Done>");
 			display.display();
 		
 		buttonState1 = HIGH; //reset button status
@@ -565,6 +589,7 @@ while (TNLeaveLoop < 1) {
 				ElapsedTime=ElapsedTime+1;
 				
 				displayClear();
+				/*
 				display.print("Start time: ");
 				if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
 				if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
@@ -577,6 +602,19 @@ while (TNLeaveLoop < 1) {
 				display.println();
 				display.print("<Task Done>");
 				display.display();
+				*/
+				
+				display.setFont(ArialMT_Plain_10);
+				display.drawString(0, 0, "Start time: ");
+				display.drawStringMaxWidth(0, 10, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
+				display.drawString(0, 20, "Elapsed Time: " + String(ElapsedTime) + " mins");
+				display.drawString(0, 30, "Sew Line #: " + String(cellLocation));
+				display.drawString(0, 30, "<Task Done>");
+				display.display();
+				
+				
+				
+				
 			}
 			
 			Serial.print("countToMinute : ");
@@ -592,9 +630,11 @@ while (TNLeaveLoop < 1) {
 		
 		Serial.print("done task!!");
 		displayClear();
-		display.print("\n");
-		display.print("       Task Done \n");
-		display.print("  Requesting new task \n");
+				
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.setFont(ArialMT_Plain_10);
+		display.drawString(64, 22, "Task Done \n \n Requesting new task \n");
+		
 		display.display();
 
 		SQLserverConnect();
@@ -658,6 +698,7 @@ while (TNLeaveLoop < 1) {
 	}
 	if (countToMinute > 1200 ){
 			displayClear();
+			/*
 			if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
 			if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
 			if(ns < 10) display.print(F("0")); display.print(ns);                       // print the second
@@ -673,6 +714,13 @@ while (TNLeaveLoop < 1) {
 			display.print(MinLeft);
 			display.print("\n");
 			display.print("START           END");
+			*/
+			display.setTextAlignment(TEXT_ALIGN_LEFT);
+			display.setFont(ArialMT_Plain_10);
+			display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
+			display.drawString(0, 10, "Sew Line # " + String(cellLocation));
+			display.drawString(0, 20, "ACK Time left :" + String(MinLeft));
+			display.drawString(0, 30, "START           END");
 			display.display();
 			
 			MinLeft--;
@@ -753,10 +801,14 @@ display.display();
 
 int buzzerFunction(int counter){
   for (int buzzerTimer = 1; buzzerTimer <= counter; buzzerTimer++){
-  tone(buzzer, 5000); // Send 5KHz sound signal...
-  delay(100);        // ...for .1 sec
+  tone(buzzer, 4000); // Send 5KHz sound signal...
+  delay(50);        // ...for .1 sec
   noTone(buzzer);     // Stop sound...
-  delay(100);        // ...for .1sec
+  delay(50); 
+  tone(buzzer2, 4000); // Send 5KHz sound signal...
+  delay(50);        // ...for .1sec
+  noTone(buzzer2);     // Stop sound...
+  delay(50);        // ...for .1sec
   }
 }
 

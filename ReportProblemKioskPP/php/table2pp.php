@@ -16,7 +16,7 @@ echo date("m/d/Y H:i:s");
 echo "</span>";
 
 
-$servername = "192.168.42.85";
+$servername = "192.168.143.200";
 $username = "nodemcu1";
 $password = "secret";
 $dbname = "kpi_mech";

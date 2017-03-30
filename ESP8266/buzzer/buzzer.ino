@@ -70,6 +70,7 @@ int demoMode = 0;
 int counter = 1;
 
 const int buzzer = 2;
+const int buzzer2 = 16;
 
 void setup() {
   Serial.begin(115200);
@@ -107,16 +108,20 @@ void loop() {
   // draw the current demo method
   drawFontFaceDemo();
 
-  buzzerFunction(1);
+  buzzerFunction(2);
   display.clear();
   delay(1000);
 }
 
 int buzzerFunction(int counter){
   for (int buzzerTimer = 1; buzzerTimer <= counter; buzzerTimer++){
-  tone(buzzer, 5000); // Send 5KHz sound signal...
+  tone(buzzer, 4000); // Send 5KHz sound signal...
   delay(100);        // ...for .1 sec
   noTone(buzzer);     // Stop sound...
+  delay(100);        // ...for .1sec
+  tone(buzzer2, 4000); // Send 5KHz sound signal...
+  delay(100);        // ...for .1 sec
+  noTone(buzzer2);     // Stop sound...
   delay(100);        // ...for .1sec
   }
 }

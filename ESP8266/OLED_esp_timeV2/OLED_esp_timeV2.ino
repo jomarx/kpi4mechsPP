@@ -97,8 +97,8 @@ Modified by: f41ardu for use with nodemcu
 #include <MySQL_Cursor.h>
 
 
-//IPAddress server_addr(192,168,143,132); // IP of the MySQL server here
-IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
+IPAddress server_addr(192,168,143,200); // IP of the MySQL server here
+//IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 
@@ -125,13 +125,13 @@ MySQL_Connection conn((Client *)&client);
 
 
 //wifi
-//char ssid[] = "outsourcing1.25s"; // your SSID
-//char pass[] = "dbafe12345!!!"; // your SSID Password
-char ssid[] = "jomarAP-SP";  //  your network SSID (name)
-char pass[] = "maquinay1";       // your network password
+char ssid[] = "outsourcing1.25s"; // your SSID
+char pass[] = "dbafe12345!!!"; // your SSID Password
+//char ssid[] = "jomarAP-SP";  //  your network SSID (name)
+//char pass[] = "maquinay1";       // your network password
 // const char* host = "utcnist2.colorado.edu";
 //const char* host = "128.138.141.172";
-const char* host = "192.168.42.85"; //laptop NTP server
+const char* host = "192.168.143.1"; //laptop NTP server
 
 int ln = 0;
 String TimeDate = "";
