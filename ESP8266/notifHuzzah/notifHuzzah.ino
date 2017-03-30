@@ -181,7 +181,7 @@ WiFiUDP udp;
 
 //buzzer
 const int buzzer = 2;
-const int buzzer2 = 16;
+const int buzzer2 = 15;
 
 //button
 const int startButton = 14;
@@ -267,6 +267,13 @@ Serial.println("IP address: ");
 Serial.println(WiFi.localIP());
 delayer(2);
 
+displayClear();
+display.setTextAlignment(TEXT_ALIGN_CENTER);
+display.drawString(64, 22, "WIFI: Connected" );
+display.print("\n");
+display.display();
+delayer(2);
+
 Serial.println("Starting UDP");
 udp.begin(localPort);
 Serial.print("Local port: ");
@@ -297,7 +304,7 @@ while (conn.connect(server_addr, 3306, user, password) != true) {
     }
 
 displayClear();
-display.setTextAlignment(TEXT_ALIGN_LEFT);
+display.setTextAlignment(TEXT_ALIGN_CENTER);
 display.setFont(ArialMT_Plain_10);
 display.drawString(0, 0, "SQL connected!\n");
 display.display();

@@ -70,7 +70,7 @@ int demoMode = 0;
 int counter = 1;
 
 const int buzzer = 2;
-const int buzzer2 = 16;
+const int buzzer2 = 15;
 
 void setup() {
   Serial.begin(115200);
