@@ -8,8 +8,8 @@
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
 
-IPAddress server_addr(192,168,143,200); // Piplay
-//IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
+//IPAddress server_addr(192,168,143,200); // Piplay
+IPAddress server_addr(192,168,42,146); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char spassword[] = "secret"; // MySQL user login password
 
@@ -44,11 +44,11 @@ char tagNumber[14];
 char realTagNum[12];
 boolean receivedTag;
 
-//const char* ssid = "jomarAP-SP";
-//const char* wpassword = "maquinay1";
+const char* ssid = "jomarAP-SP";
+const char* wpassword = "maquinay1";
 
-const char* ssid = "outsourcing1.25s";
-const char* wpassword = "dbafe12345!!!";
+//const char* ssid = "outsourcing1.25s";
+//const char* wpassword = "dbafe12345!!!";
 
 //rfid tag
 int validRFID = 7754087;
