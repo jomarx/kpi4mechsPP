@@ -164,7 +164,7 @@ while (WiFi.status() != WL_CONNECTED) {
 
 	pinMode(startButton, INPUT_PULLUP);
 	pinMode(cancelButton, INPUT_PULLUP);
-	pinMode(AttFunctionButton, INPUT);
+	pinMode(AttFunctionButton, INPUT); //to change
 		
 	attachInterrupt(startButton, startButtonChange, CHANGE);
 	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
