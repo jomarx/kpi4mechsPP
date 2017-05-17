@@ -16,8 +16,13 @@ GND     = GND
 3.3V    = 3.3V
 */
 
+#include <Wire.h>  // This library is already built in to the Arduino IDE
+#include <LiquidCrystal_I2C.h> //This library you can add via Include Library > Manage Library > 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+ 
+
 #define RST_PIN 2  //5 RST-PIN für RC522 - RFID - SPI - Modul GPIO5 
-#define SS_PIN 16  //4 SDA-PIN für RC522 - RFID - SPI - Modul GPIO4 
+#define SS_PIN 15  //4 SDA-PIN für RC522 - RFID - SPI - Modul GPIO4 
 
 const char *ssid =  "jomarAP-SP";     // change according to your Network - cannot be longer than 32 characters!
 const char *pass =  "maquinay1"; // change according to your Network
@@ -47,6 +52,14 @@ void setup() {
   Serial.println(F("Ready!"));
   Serial.println(F("======================================================")); 
   Serial.println(F("Scan for Card and print UID:"));
+  
+  lcd.init();   // initializing the LCD
+  lcd.backlight(); // Enable or Turn On the backlight 
+  lcd.setCursor(0, 1);
+  lcd.print("16x2 LCD TEST"); // Start Print text to Line 1
+  lcd.setCursor(0, 2);      
+  lcd.print("143 Time"); // Start Print Test to Line 2
+  
 }
 
 void loop() { 
@@ -62,6 +75,8 @@ void loop() {
   }
   // Show some details of the PICC (that is: the tag/card)
   Serial.print(F("Card UID:"));
+  lcd.setCursor(0, 1);      
+  lcd.print("card read"); // Start Print Test to Line 2
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
   Serial.println();
 }
