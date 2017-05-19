@@ -38,6 +38,24 @@ const char *pass =  "maquinay1"; // change according to your Network
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 
+//SQL
+#include <WiFiClient.h>
+
+#include <MySQL_Connection.h>
+#include <MySQL_Cursor.h>
+
+IPAddress server_addr(192,168,42,146); // IP of the MySQL server here
+char user[] = "nodemcu1"; // MySQL user login username
+char password[] = "secret"; // MySQL user login password
+// Sample query
+char INSERT_SQL[] = "INSERT INTO kpi_mech.rfid_db (col1, col2, col3, col4) VALUES (%d, %d, %d, %d);";
+char query[256];
+
+WiFiClient client;
+
+MySQL_Connection conn((Client *)&client);
+
+
 void setup() {
 	
 	WiFi.mode(WIFI_STA);
@@ -98,6 +116,12 @@ void setup() {
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
   Serial.println(F("Waiting PICCs to be scanned"));
+  
+  while (conn.connect(server_addr, 3306, user, password) != true) {
+	delay(500);
+	Serial.print ( "." );
+}
+  
 }
 
 void loop() { 
@@ -226,15 +250,29 @@ void readID( int number ) {
 ///////////////////////////////////////// Add ID to EEPROM   ///////////////////////////////////
 void writeID( byte a[] ) {
   if ( !findID( a ) ) { 		// Before we write to the EEPROM, check to see if we have seen this card before!
-    int num = EprmDaw[0]; 		// Get the numer of used spaces, position 0 stores the number of ID cards
+    int col[3];
+	int num = EprmDaw[0]; 		// Get the numer of used spaces, position 0 stores the number of ID cards
     int start = ( num * 4 ) + 6; 	// Figure out where the next slot starts
     num++; 								// Increment the counter by one
     EprmDaw[0] = num; 		// Write the new count to the counter
     for ( int j = 0; j < 4; j++ ) { 	// Loop 4 times
       EprmDaw[start + j] = a[j]; 	// Write the array values to EEPROM in the right position
+	  col[j] = a[j];
+	  Serial.println(col[j]);
     }
     
+	// Initiate the query class instance
+	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
+	sprintf(query, INSERT_SQL, col[0],col[1],col[2],col[3]);
+	// Execute the query
+	cur_mem->execute(query);
+	// Note: since there are no results, we do not need to read any data
+	// Deleting the cursor also frees up memory used
+	delete cur_mem;
+	
     Serial.println(F("Succesfully added ID record to EEPROM"));
+	
+	
   }
   else {
     
@@ -342,3 +380,4 @@ boolean isMaster( byte test[] ) {
   else
     return false;
 }
+

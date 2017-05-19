@@ -77,8 +77,8 @@ Serial.println ( WiFi.localIP() );
 // End WiFi section
 Serial.println("DB - Connecting...");
 while (conn.connect(server_addr, 3306, user, password) != true) {
-delay(500);
-Serial.print ( "." );
+	delay(500);
+	Serial.print ( "." );
 }
 }
 
