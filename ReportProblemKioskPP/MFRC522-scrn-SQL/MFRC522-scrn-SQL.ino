@@ -50,6 +50,7 @@ char password[] = "secret"; // MySQL user login password
 // Sample query
 char INSERT_SQL[] = "INSERT INTO kpi_mech.rfid_db (col1, col2, col3, col4) VALUES (%d, %d, %d, %d);";
 char SELECT_SQL[] = "SELECT col1, col2, col3, col4 FROM kpi_mech.rfid_db;";
+char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = %d AND col2 = %d AND col3 = %d AND col4 = %d ORDER BY empID ASC limit 1;";
 char query[256];
 
 WiFiClient client;
@@ -79,6 +80,11 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(F("WiFi connected"));
   }
+  
+    while (conn.connect(server_addr, 3306, user, password) != true) {
+	delay(500);
+	Serial.print ( "." );
+	}
   
   Serial.println(F("Ready!"));
   Serial.println(F("======================================================")); 
@@ -118,11 +124,7 @@ void setup() {
   Serial.println(F("Everything Ready"));
   Serial.println(F("Waiting PICCs to be scanned"));
   
-  while (conn.connect(server_addr, 3306, user, password) != true) {
-	delay(500);
-	Serial.print ( "." );
-	}
-	
+
 	Serial.println("GET CARDS FROM SQL");
 	row_values *row = NULL;
 	delay(100);
@@ -271,6 +273,30 @@ int getID() {
   Serial.print("modified : ");
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
   Serial.println("");
+  
+  Serial.println("GET CARDS FROM SQL from stored RFID lists");
+	row_values *row = NULL;
+	delay(100);
+	int rowss = 0;
+	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
+	sprintf(query, SELECTID_SQL, readCard[0], readCard[1], readCard[2], readCard[3] );
+	cur_mem->execute(query);
+	column_names *columns = cur_mem->get_columns();
+	byte transferCard[4];		// Stores an ID read from SQL
+	int tester = 0;
+	
+	do {
+		row = cur_mem->get_next_row();
+		if (row != NULL) {
+			Serial.print("Card found!!");
+			tester = 1;
+			} else {
+					if (tester == 0) {
+						Serial.print("Card not found!!");
+					}
+				}
+		} while (row != NULL);
+  
   mfrc522.PICC_HaltA(); // Stop reading
   return 1;
 }
