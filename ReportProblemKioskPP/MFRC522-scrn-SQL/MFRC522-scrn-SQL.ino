@@ -49,6 +49,7 @@ char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 // Sample query
 char INSERT_SQL[] = "INSERT INTO kpi_mech.rfid_db (col1, col2, col3, col4) VALUES (%d, %d, %d, %d);";
+char SELECT_SQL[] = "SELECT col1, col2, col3, col4 FROM kpi_mech.rfid_db;";
 char query[256];
 
 WiFiClient client;
@@ -120,8 +121,44 @@ void setup() {
   while (conn.connect(server_addr, 3306, user, password) != true) {
 	delay(500);
 	Serial.print ( "." );
-}
-  
+	}
+	
+	Serial.println("GET CARDS FROM SQL");
+	row_values *row = NULL;
+	delay(100);
+	int rowss = 0;
+	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
+	cur_mem->execute(SELECT_SQL);
+	column_names *columns = cur_mem->get_columns();
+	byte transferCard[4];		// Stores an ID read from SQL
+
+	do {
+		row = cur_mem->get_next_row();
+		if (row != NULL) {
+			transferCard[0] = atol(row->values[0]);
+			Serial.print("DEC value of COL1 = ");
+			Serial.println(transferCard[0]);
+			transferCard[1] = atol(row->values[1]);
+			Serial.print("DEC value of COL2 = ");
+			Serial.println(transferCard[1]);
+			transferCard[2] = atol(row->values[2]);
+			Serial.print("DEC value of COL3 = ");
+			Serial.println(transferCard[2]);
+			transferCard[3] = atol(row->values[3]);
+			Serial.print("DEC value of COL4 = ");
+			Serial.println(transferCard[3]);
+			Serial.println("");
+			rowss = rowss + 1;
+			writeID(transferCard);
+			}
+		} while (row != NULL);
+	
+	Serial.print("value of rowss = ");
+	Serial.println(rowss);
+	Serial.println("");
+	
+	delete cur_mem;
+	
 }
 
 void loop() { 
@@ -260,7 +297,7 @@ void writeID( byte a[] ) {
 	  col[j] = a[j];
 	  Serial.println(col[j]);
     }
-    
+    /*
 	// Initiate the query class instance
 	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
 	sprintf(query, INSERT_SQL, col[0],col[1],col[2],col[3]);
@@ -269,7 +306,7 @@ void writeID( byte a[] ) {
 	// Note: since there are no results, we do not need to read any data
 	// Deleting the cursor also frees up memory used
 	delete cur_mem;
-	
+	*/
     Serial.println(F("Succesfully added ID record to EEPROM"));
 	
 	
@@ -381,3 +418,16 @@ boolean isMaster( byte test[] ) {
     return false;
 }
 
+// Converting from Decimal to Hex:
+
+// NOTE: This function can handle a positive decimal value from 0 - 255, and it will pad it
+//       with 0's (on the left) if it is less than the desired string length.
+//       For larger/longer values, change "byte" to "unsigned int" or "long" for the decValue parameter.
+// https://github.com/benrugg/Arduino-Hex-Decimal-Conversion/blob/master/hex_dec.ino
+
+String decToHex(byte decValue) {
+  
+  String hexString = String(decValue, HEX);
+  Serial.println(hexString);
+  return hexString;
+}
