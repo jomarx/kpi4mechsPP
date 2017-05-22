@@ -84,7 +84,7 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(F("WiFi connected"));
   }
-  
+	Serial.println(F("Connecting to SQL"));
     while (conn.connect(server_addr, 3306, user, password) != true) {
 	delay(500);
 	Serial.print ( "." );
@@ -103,6 +103,7 @@ void setup() {
   
   ShowReaderDetails();	// Show details of PCD - MFRC522 Card Reader details
   
+  /*
   if (EprmDaw[1] != 143) {
     Serial.println(F("No Master Card Defined"));
     Serial.println(F("Scan A PICC to Define as Master Card"));
@@ -123,12 +124,13 @@ void setup() {
     masterCard[i] = EprmDaw[2 + i];    // Write it to masterCard
     Serial.print(masterCard[i], HEX);
   }
+  */
   Serial.println("");
   Serial.println(F("-------------------"));
   Serial.println(F("Everything Ready"));
   Serial.println(F("Waiting PICCs to be scanned"));
   
-
+/*
 	Serial.println("GET CARDS FROM SQL");
 	row_values *row = NULL;
 	delay(100);
@@ -164,7 +166,7 @@ void setup() {
 	Serial.println("");
 	
 	delete cur_mem;
-	
+	*/
 }
 
 void loop() { 
@@ -195,54 +197,19 @@ void loop() {
   while (!successRead); 	//the program will not go further while you not get a successful read
   
   
-    if (programMode) {
-    if ( isMaster(readCard) ) { //If master card scanned again exit program mode
-      Serial.println(F("Master Card Scanned"));
-      Serial.println(F("Exiting Program Mode"));
-      Serial.println(F("-----------------------------"));
-      programMode = false;
-      return;
-    }
-    else {
-      if ( findID(readCard) ) { // If scanned card is known delete it
-        Serial.println(F("I know this PICC, removing..."));
-        deleteID(readCard);
+      if ( successRead == 2 ) { // If scanned card is known delete it
+        Serial.println(F("I know this PICC, Not adding to DB..."));
         Serial.println("-----------------------------");
-        Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
+        Serial.println(F("Waiting PICCs to be scanned"));
       }
-      else {                    // If scanned card is not known add it
-        Serial.println(F("I do not know this PICC, adding..."));
+      else if (successRead == 1) {                    // If scanned card is not known add it
+        Serial.println(F("I do not know this PICC, adding to DB..."));
         writeID(readCard);
         Serial.println(F("-----------------------------"));
-        Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
+        Serial.println(F("Waiting PICCs to be scanned"));
       }
-    }
-  }
-  else {
-    if ( isMaster(readCard)) {  	// If scanned card's ID matches Master Card's ID enter program mode
-      programMode = true;
-      Serial.println(F("Hello Master - Entered Program Mode"));
-      int count =EprmDaw[0]; 	// Read the first Byte of EEPROM that
-      Serial.print(F("I have "));    	// stores the number of ID's in EEPROM
-      Serial.print(count);
-      Serial.print(F(" record(s) on EEPROM"));
-      Serial.println("");
-      Serial.println(F("Scan a PICC to ADD or REMOVE to EEPROM"));
-      Serial.println(F("Scan Master Card again to Exit Program Mode"));
-      Serial.println(F("-----------------------------"));
-    }
-    else {
-      if ( findID(readCard) ) {	// If not, see if the card is in the EEPROM
-        Serial.println(F("Welcome, You shall pass"));
-        
-      }
-      else {			// If not, show that the ID was not valid
-        Serial.println(F("You shall not pass"));
-        
-      }
-    }
-  }
 }
+
 
 // Helper routine to dump a byte array as hex values to Serial
 void dump_byte_array(byte *buffer, byte bufferSize) {
@@ -288,21 +255,24 @@ int getID() {
 	column_names *columns = cur_mem->get_columns();
 	byte transferCard[4];		// Stores an ID read from SQL
 	int tester = 0;
+	Serial.println("CARDS read FROM SQL ");
 	
 	do {
 		row = cur_mem->get_next_row();
 		if (row != NULL) {
-			Serial.print("Card found!!");
+			Serial.println("Card found!!");
 			tester = 1;
+			return 2; //returns value of 2 if card is found
 			} else {
 					if (tester == 0) {
-						Serial.print("Card not found!!");
+						Serial.println("Card not found!!");
+						return 1; // returns value of 1 if card not found
 					}
 				}
 		} while (row != NULL);
   
   mfrc522.PICC_HaltA(); // Stop reading
-  return 1;
+  
 }
 
 
@@ -327,7 +297,7 @@ void writeID( byte a[] ) {
 	  col[j] = a[j];
 	  Serial.println(col[j]);
     }
-    /*
+    
 	// Initiate the query class instance
 	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
 	sprintf(query, INSERT_SQL, col[0],col[1],col[2],col[3]);
@@ -336,43 +306,14 @@ void writeID( byte a[] ) {
 	// Note: since there are no results, we do not need to read any data
 	// Deleting the cursor also frees up memory used
 	delete cur_mem;
-	*/
-    Serial.println(F("Succesfully added ID record to EEPROM"));
+	
+    Serial.println(F("Succesfully added ID record to SQL"));
 	
 	
   }
   else {
     
     Serial.println(F("Failed! There is something wrong with ID or bad EEPROM"));
-  }
-}
-
-///////////////////////////////////////// Remove ID from EEPROM   ///////////////////////////////////
-void deleteID( byte a[] ) {
-  if ( !findID( a ) ) { 		// Before we delete from the EEPROM, check to see if we have this card!
-     			// If not
-    Serial.println(F("Failed! There is something wrong with ID or bad EEPROM"));
-  }
-  else {
-    int num = EprmDaw[0]; 	// Get the numer of used spaces, position 0 stores the number of ID cards
-    int slot; 			// Figure out the slot number of the card
-    int start;			// = ( num * 4 ) + 6; // Figure out where the next slot starts
-    int looping; 		// The number of times the loop repeats
-    int j;
-    int count = EprmDaw[0]; // Read the first Byte of EEPROM that stores number of cards
-    slot = findIDSLOT( a ); 	// Figure out the slot number of the card to delete
-    start = (slot * 4) + 2;
-    looping = ((num - slot) * 4);
-    num--; 			// Decrement the counter by one
-    EprmDaw[0] = num; 	// Write the new count to the counter
-    for ( j = 0; j < looping; j++ ) { 				// Loop the card shift times
-      EprmDaw[start + j] = EprmDaw[start + 4 + j]; 	// Shift the array values to 4 places earlier in the EEPROM
-    }
-    for ( int k = 0; k < 4; k++ ) { 				// Shifting loop
-      EprmDaw[start + j + k] = 0;
-    }
-    
-    Serial.println(F("Succesfully removed ID record from EEPROM"));
   }
 }
 
@@ -419,6 +360,7 @@ boolean findID( byte find[] ) {
   }
   return false;
 }
+
 void ShowReaderDetails() {
   // Get the MFRC522 software version
   byte v = mfrc522.PCD_ReadRegister(mfrc522.VersionReg);
@@ -448,16 +390,3 @@ boolean isMaster( byte test[] ) {
     return false;
 }
 
-// Converting from Decimal to Hex:
-
-// NOTE: This function can handle a positive decimal value from 0 - 255, and it will pad it
-//       with 0's (on the left) if it is less than the desired string length.
-//       For larger/longer values, change "byte" to "unsigned int" or "long" for the decValue parameter.
-// https://github.com/benrugg/Arduino-Hex-Decimal-Conversion/blob/master/hex_dec.ino
-
-String decToHex(byte decValue) {
-  
-  String hexString = String(decValue, HEX);
-  Serial.println(hexString);
-  return hexString;
-}
