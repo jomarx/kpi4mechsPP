@@ -1,5 +1,9 @@
 /*
-Many thanks to nikxha from the ESP8266 forum
+char bug,
+
+https://www.arduino.cc/en/Reference/String
+http://www.nongnu.org/avr-libc/user-manual/group__avr__string.html
+https://forum.arduino.cc/index.php?topic=405786.0
 */
 
 #include <ESP8266WiFi.h>
@@ -22,6 +26,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
  
 byte storedCard[4];		// Stores an ID read from EEPROM
 byte readCard[4];		// Stores scanned ID read from RFID Module
+byte lastReadCard[4];		// Stores last scanned ID read from RFID Module
 byte masterCard[4];		// Stores master card's ID read from EEPROM
 byte EprmDaw[16];
 
@@ -36,8 +41,8 @@ boolean programMode = false;	// initialize programming mode to false
 //const char *ssid =  "jomarAP-SP";     // change according to your Network - cannot be longer than 32 characters!
 //const char *pass =  "maquinay1"; // change according to your Network
 
-const char *ssid =  "outsourcing1.25s";     // change according to your Network - cannot be longer than 32 characters!
-const char *pass =  "dbafe12345!!!"; // change according to your Network
+const char *ssid =  "outsourcing1.25";     // change according to your Network - cannot be longer than 32 characters!
+const char *pass =  "dbafe54321!"; // change according to your Network
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 
@@ -48,14 +53,16 @@ MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 #include <MySQL_Cursor.h>
 
 //IPAddress server_addr(192,168,42,146); // IP of the MySQL server here
-IPAddress server_addr(192,168,143,200); // IP of the MySQL server here
+IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 // Sample query
 char INSERT_SQL[] = "INSERT INTO kpi_mech.rfid_db (col1, col2, col3, col4) VALUES (%d, %d, %d, %d);";
 char SELECT_SQL[] = "SELECT col1, col2, col3, col4 FROM kpi_mech.rfid_db;";
-char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = %d AND col2 = %d AND col3 = %d AND col4 = %d ORDER BY empID ASC limit 1;";
-char query[256];
+char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = %lu AND col2 = %lu AND col3 = %lu AND col4 = %lu;";
+//char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = 210 AND col2 = 40 AND col3 = 175 AND col4 = 22;";
+
+char query[512];
 
 WiFiClient client;
 
@@ -237,6 +244,7 @@ int getID() {
   // Until we support 7 byte PICCs
   Serial.println(F("Scanned PICC's UID:"));
   for (int i = 0; i < 4; i++) {  //
+	lastReadCard[i] = readCard[i];
     readCard[i] = mfrc522.uid.uidByte[i];
     Serial.print(readCard[i], HEX);
   }
@@ -245,14 +253,25 @@ int getID() {
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
   Serial.println("");
   
-  Serial.println("GET CARDS FROM SQL from stored RFID lists");
-	row_values *row = NULL;
+  if (!checkTwo(readCard,lastReadCard)) {
+	Serial.println("GET CARDS FROM SQL from stored RFID lists");
 	delay(100);
 	int rowss = 0;
 	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
 	sprintf(query, SELECTID_SQL, readCard[0], readCard[1], readCard[2], readCard[3] );
 	cur_mem->execute(query);
-	column_names *columns = cur_mem->get_columns();
+	Serial.println(query);
+	
+	column_names *cols = cur_mem->get_columns();
+	  for (int f = 0; f < cols->num_fields; f++) {
+    Serial.print(cols->fields[f]->name);
+    if (f < cols->num_fields-1) {
+      Serial.print(',');
+    }
+  }
+	
+	row_values *row = NULL;
+	delay(100);
 	byte transferCard[4];		// Stores an ID read from SQL
 	int tester = 0;
 	Serial.println("CARDS read FROM SQL ");
@@ -270,7 +289,13 @@ int getID() {
 					}
 				}
 		} while (row != NULL);
-  
+  delete cur_mem;
+  delete query;
+  } else { 
+	Serial.println("Same card as last time "); 
+	Serial.println(F("-----------------------------"));
+	Serial.println(F("Waiting PICCs to be scanned"));
+	}
   mfrc522.PICC_HaltA(); // Stop reading
   
 }
