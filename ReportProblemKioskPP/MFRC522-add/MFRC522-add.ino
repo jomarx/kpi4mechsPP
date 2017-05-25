@@ -59,10 +59,10 @@ char password[] = "secret"; // MySQL user login password
 // Sample query
 char INSERT_SQL[] = "INSERT INTO kpi_mech.rfid_db (col1, col2, col3, col4) VALUES (%d, %d, %d, %d);";
 char SELECT_SQL[] = "SELECT col1, col2, col3, col4 FROM kpi_mech.rfid_db;";
-char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = %lu AND col2 = %lu AND col3 = %lu AND col4 = %lu;";
-//char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = 210 AND col2 = 40 AND col3 = 175 AND col4 = 22;";
+char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = %d AND col2 = %d AND col3 = %d AND col4 = %d;";
+//char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = 210;";
 
-char query[512];
+char query[256];
 
 WiFiClient client;
 
@@ -252,7 +252,7 @@ int getID() {
   Serial.print("modified : ");
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
   Serial.println("");
-  
+  SQLserverConnect();
   if (!checkTwo(readCard,lastReadCard)) {
 	Serial.println("GET CARDS FROM SQL from stored RFID lists");
 	delay(100);
@@ -289,8 +289,11 @@ int getID() {
 					}
 				}
 		} while (row != NULL);
+  
   delete cur_mem;
   delete query;
+  conn.close();
+	Serial.println(F("SQL disconnected"));
   } else { 
 	Serial.println("Same card as last time "); 
 	Serial.println(F("-----------------------------"));
@@ -331,7 +334,8 @@ void writeID( byte a[] ) {
 	// Note: since there are no results, we do not need to read any data
 	// Deleting the cursor also frees up memory used
 	delete cur_mem;
-	
+	conn.close();
+	Serial.println(F("SQL disconnected"));
     Serial.println(F("Succesfully added ID record to SQL"));
 	
 	
@@ -415,3 +419,14 @@ boolean isMaster( byte test[] ) {
     return false;
 }
 
+int SQLserverConnect() {
+	int ResetCounter = 0;
+while (conn.connect(server_addr, 3306, user, password) != true) {
+	delay(800);
+    Serial.print( "." );
+    Serial.print(ResetCounter);
+    ResetCounter++;
+	
+    }
+	Serial.println( "connected again!" );
+}
