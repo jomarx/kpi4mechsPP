@@ -418,7 +418,8 @@ boolean isMaster( byte test[] ) {
   else
     return false;
 }
-
+///////////////////// SQL connector   ///////////////////////////////////
+// Check to see if device is connected to SQL
 int SQLserverConnect() {
 	int ResetCounter = 0;
 while (conn.connect(server_addr, 3306, user, password) != true) {
