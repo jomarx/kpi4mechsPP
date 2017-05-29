@@ -109,7 +109,7 @@ SSD1306 display(0x3c, 4, 5);
 #include <MySQL_Cursor.h>
 
 
-IPAddress server_addr(192,168,143,200); // IP of the MySQL server here
+IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
 //IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
@@ -143,7 +143,7 @@ char pass[] = "dbafe12345!!!"; // your SSID Password
 //char pass[] = "maquinay1";       // your network password
 // const char* host = "utcnist2.colorado.edu";
 //const char* host = "128.138.141.172";
-const char* host = "192.168.42.85"; //laptop NTP server
+const char* host = "192.168.143.1"; //laptop NTP server
 
 int ln = 0;
 String TimeDate = "";
@@ -184,14 +184,16 @@ const int buzzer = 2;
 const int buzzer2 = 15;
 
 //button
-const int startButton = 14;
-const int cancelButton = 12;
+const int startButton = 12;
+const int cancelButton = 13;
+const int LockButton = 14;
+
 int buttonState1 = 1;
 int buttonState2 = 1;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 1;
+int mechanicID = 2;
 
 //ElapsedTime = time elpsed since start
 int ElapsedTime = 0;
@@ -217,7 +219,6 @@ buzzerFunction(3);
 
 //start NTP
 Serial.begin(9600);
-Serial.println();
 Serial.println();
 
 // We start by connecting to a WiFi network
@@ -306,7 +307,7 @@ while (conn.connect(server_addr, 3306, user, password) != true) {
 displayClear();
 display.setTextAlignment(TEXT_ALIGN_CENTER);
 display.setFont(ArialMT_Plain_10);
-display.drawString(0, 0, "SQL connected!\n");
+display.drawString(64, 22, "SQL connected!\n");
 display.display();
 }
 
@@ -807,16 +808,16 @@ display.display();
 }
 
 int buzzerFunction(int counter){
-  for (int buzzerTimer = 1; buzzerTimer <= counter; buzzerTimer++){
-  tone(buzzer, 4000); // Send 5KHz sound signal...
-  delay(50);        // ...for .1 sec
-  noTone(buzzer);     // Stop sound...
-  delay(50); 
-  tone(buzzer2, 4000); // Send 5KHz sound signal...
-  delay(50);        // ...for .1sec
-  noTone(buzzer2);     // Stop sound...
-  delay(50);        // ...for .1sec
-  }
+	for (int buzzerTimer = 1; buzzerTimer <= counter; buzzerTimer++){
+		tone(buzzer, 4000); // Send 5KHz sound signal...
+		delay(50);        // ...for .1 sec
+		noTone(buzzer);     // Stop sound...
+		delay(50); 
+		tone(buzzer2, 4000); // Send 5KHz sound signal...
+		delay(50);        // ...for .1 sec
+		noTone(buzzer2);     // Stop sound...
+		delay(50); 
+	}
 }
 
 
