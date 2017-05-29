@@ -1,6 +1,15 @@
+/*
+For Elecrow i2c LCD :
+https://github.com/esp8266/Arduino/issues/2366
+https://www.elecrow.com/wiki/index.php?title=Crowtail-_I2C_LCD
+
+*/
+
+
 #include <ESP8266WiFi.h>
 #include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
+//#include <LiquidCrystal_I2C.h>
+#include "LiquidCrystal.h"
 
 //SQL read
 #include <WiFiClient.h>
@@ -42,7 +51,9 @@ WiFiClient client;
 MySQL_Connection conn((Client *)&client);
 
 //LCD
-LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+//LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal lcd(0);
+
 
 String tagString;
 char tagNumber[14];
@@ -155,7 +166,6 @@ void setup() {
 		delay(500);
 		Serial.print(".");
 		Serial.print(ResetCounter);
-		Serial.print(WiFi.status());
 		ResetCounter++;
 		if (ResetCounter >= 30) {
 			Serial.print("\n");
@@ -165,10 +175,12 @@ void setup() {
 	}
 
   //LCD init
-  lcd.init();                      // initialize the lcd 
-
+  //lcd.init();                      // initialize the lcd 
+  lcd.begin(16, 2); //crowtail LCD
+  
   // Print a message to the LCD.
-  lcd.backlight();
+  //lcd.backlight();
+  lcd.setBacklight(HIGH); //crowtail LCD
   lcd.setCursor(0,0);
   lcd.print("Report Problem");
   lcd.setCursor(0,1);
@@ -179,7 +191,7 @@ void setup() {
 	pinMode(startButton, INPUT_PULLUP);
 	//pinMode(AttFunctionButton, INPUT); //to change
 		
-	attachInterrupt(startButton, startButtonChange, CHANGE);
+	//attachInterrupt(startButton, startButtonChange, CHANGE);
 	//attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
 
   Serial.println("");
@@ -218,7 +230,7 @@ while (conn.connect(server_addr, 3306, user, spassword) != true) {
 }
 
 void loop(){
-	
+
 	//reset button state
 	buttonState1 = 1;
 	buttonState2 = 1;
@@ -255,8 +267,8 @@ delay(3000);
 ClearLCD();
 lcd.print("Scan Machine ID");
 Serial.println("Scan Machine ID");
-delay(3000);
-
+delay(500);
+buzzerFunction(1);
 do {
 	successRead = getID(2); 	// sets successRead to 1 when we get read from reader otherwise 0
 	delay(10);
@@ -269,6 +281,7 @@ Serial.println("Machine ID OK");
 
 Serial.print("value of RFID = ");
 Serial.println(cellLocation);
+buzzerFunction(1);
 
 ClearLCD();
 //put Emp# check here
@@ -282,6 +295,7 @@ delay (2000);
 
 do {
 	potVal = analogRead(potPin);    // read the potValue from the sensor
+	Serial.println(potVal);
 	if (potVal > 100 && potVal < 286) {mbdc=1;}
 	else if (potVal > 297 && potVal < 323) {mbdc=2;}
 	else if (potVal > 334 && potVal < 360) {mbdc=3;}
@@ -303,7 +317,7 @@ do {
 	else if (potVal > 926 && potVal < 952) {mbdc=19;}
 	else if (potVal > 963 && potVal < 989) {mbdc=20;}
 	
-	delay(10);
+	delay(500);
 	yield();
 	ClearLCD();
 	lcd.print("Emp# : ");
@@ -312,9 +326,10 @@ do {
 	lcd.setCursor(0,1);
 	lcd.print("Brkdwn Cd : P");
 	lcd.print(mbdc);
+	buttonState1 = digitalRead(startButton);    // read the potValue from the sensor
 	
-} while (buttonState1 == LOW && buttonState2 == LOW); 
-
+} while (buttonState1 == HIGH && buttonState2 == HIGH); 
+Serial.println("i'm here");
 if (buttonState1 == LOW && buttonState2 == HIGH) {
 	Serial.print("Start");
 
@@ -405,6 +420,7 @@ countToFive++;
 	
 	countToloop++;
 	yield();
+	Serial.print("End loop");
   
 } // end main loop
 
@@ -434,12 +450,6 @@ while (conn.connect(server_addr, 3306, user, spassword) != true) {
 	Serial.println( "connected again!" );
 }
 
-void startButtonChange() {
-	
-	buttonState1 = 0;
-	
-}
-
 // Helper routine to dump a byte array as hex values to Serial
 void dump_byte_array(byte *buffer, byte bufferSize) {
   for (byte i = 0; i < bufferSize; i++) {
@@ -466,6 +476,7 @@ int getID( int number) {
   // Until we support 7 byte PICCs
   Serial.println(F("Scanned PICC's UID:"));
 	ClearLCD();
+	buzzerFunction(1);
 	lcd.print("RFID found");
 	lcd.setCursor(0,1);
 	lcd.print("Checking RFID");
@@ -478,6 +489,7 @@ int getID( int number) {
   Serial.print("modified : ");
   dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
   Serial.println("");
+  SQLserverConnect();
   
   
 	Serial.println("GET CARDS FROM SQL from stored RFID lists");
@@ -532,7 +544,8 @@ int getID( int number) {
 		} while (row != NULL);
   delete cur_mem;
   delete query;
-  
+    conn.close();
+	Serial.println(F("SQL disconnected"));
   mfrc522.PICC_HaltA(); // Stop reading
   
 }
@@ -568,7 +581,8 @@ void writeID( byte a[] ) {
 	// Note: since there are no results, we do not need to read any data
 	// Deleting the cursor also frees up memory used
 	delete cur_mem;
-	
+	conn.close();
+	Serial.println(F("SQL disconnected"));
     Serial.println(F("Succesfully added ID record to SQL"));
 	
 	
