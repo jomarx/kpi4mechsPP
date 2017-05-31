@@ -48,7 +48,7 @@ MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 #include <MySQL_Cursor.h>
 
 //IPAddress server_addr(192,168,42,146); // IP of the MySQL server here
-IPAddress server_addr(192,168,143,200); // IP of the MySQL server here
+IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 // Sample query
