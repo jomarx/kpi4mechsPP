@@ -29,7 +29,7 @@ char spassword[] = "secret"; // MySQL user login password
 char INSERT_SQL[] = "INSERT INTO kpi_mech.rfid_db (col1, col2, col3, col4) VALUES (%d, %d, %d, %d);";
 char QUERY_SMID[] = "SELECT SpecialSerial, RFID FROM kpi_mech.sm_db WHERE RFID = %lu; ";
 char QUERY_EMPID[] = "SELECT EmpNo, location FROM kpi_mech.user_db WHERE rfid = %lu; ";
-char QUERY_INSERT[] = "insert into kpi_mech.task_db (EmpNo, Status, details, SpecialSerial, location, StartDate, BreakStartTime) values (%d, 0, %d, %d, 1, (now()),(Curtime()));";
+char QUERY_INSERT[] = "INSERT INTO kpi_mech.task_db (EmpNo, Status, details, location, Assignee, StartDate, BreakStartTime) values (%d, 0, %d, %d, 0, (now()),(Curtime()));";
 char QUERY_FNDTASK[] = "SELECT ID, SpecialSerial FROM kpi_mech.task_db WHERE Status = %d limit 1; ";
 char QUERY_FNDCTASK[] = "SELECT mech FROM kpi_mech.cancel_db WHERE taskID = %d; ";
 char QUERY_FNDTTASK[] = "SELECT mech FROM kpi_mech.timeout_db WHERE taskID = %d; ";
@@ -38,10 +38,10 @@ char QUERY_FINDCMECH[] = "SELECT empID, NotifNo FROM kpi_mech.mech_db WHERE stat
 char QUERY_UPDATEMECH[] = "UPDATE kpi_mech.mech_db SET status = 1 WHERE empID = %d; ";
 char QUERY_UPDATETASK[] = "UPDATE kpi_mech.task_db SET location = 1, Status = 1, NotifNo = %d, Assignee = %d WHERE ID = %d; ";
 char QUERY_UPDATETASK1[] = "UPDATE kpi_mech.task_db SET location = 1, Status = 1, NotifNo = %d, Assignee = %d WHERE ID = %d; insert into kpi_mech.mbreak_db (SpecialSerial, StartDate, TaskID) values (%d, (now()), %d);";
-char QUERY_MECHSTART[] = "insert into kpi_mech.mstat_db (SpecialSerial, StartDate, Status) values (%d, (now()), 1); UPDATE kpi_mech.mech_db SET att_stat = 1 WHERE SpecialSerial = %d;";
-char QUERY_MECHEND[] = "UPDATE kpi_mech.mstat_db SET EndDate = (now()), status = 2 WHERE SpecialSerial = %d, status = 1; UPDATE kpi_mech.mech_db SET att_stat = 0 WHERE SpecialSerial = %d;";
-char QUERY_MECHBSTART[] = "";
-char QUERY_MECHBEND[] = "";
+char QUERY_MECHSTART[] = "insert into kpi_mech.mstat_db (empID, StartDate, Status) values (%d, (now()), 1); UPDATE kpi_mech.mech_db SET att_stat = 1 WHERE empID = %d;";
+char QUERY_MECHEND[] = "UPDATE kpi_mech.mstat_db SET EndDate = (now()), status = 2 WHERE empID = %d, status = 1; UPDATE kpi_mech.mech_db SET att_stat = 0 WHERE empID = %d;";
+char QUERY_MECHBSTART[] = "insert into kpi_mech.mstat_db (empID, StartDate, Status) values (%d, (now()), 3); UPDATE kpi_mech.mech_db SET att_stat = 0 WHERE empID = %d;";
+char QUERY_MECHBEND[] = "UPDATE kpi_mech.mstat_db SET EndDate = (now()), status = 2 WHERE empID = %d, status = 3; UPDATE kpi_mech.mech_db SET att_stat = 1 WHERE empID = %d;";
 char QUERY_FNDMECHEMPID[] = "SELECT SpecialSerial FROM kpi_mech.mech_db WHERE SpecialSerial = %lu;";
 char SELECTID_SQL[] = "SELECT empID FROM kpi_mech.rfid_db WHERE col1 = %lu AND col2 = %lu AND col3 = %lu AND col4 = %lu;";
 char SELECTSS_SQL[] = "SELECT SpecialSerial FROM kpi_mech.rfid_db WHERE col1 = %lu AND col2 = %lu AND col3 = %lu AND col4 = %lu;";
@@ -58,7 +58,6 @@ LiquidCrystal lcd(0);
 String tagString;
 char tagNumber[14];
 char realTagNum[12];
-boolean receivedTag;
 
 //const char* ssid = "jomarAP-SP";
 //const char* wpassword = "maquinay1";
@@ -224,8 +223,7 @@ while (conn.connect(server_addr, 3306, user, spassword) != true) {
   lcd.setCursor(0,0);
   lcd.print("SQL connected");
   delay(1000);
-	ClearLCD();
-	lcd.print("Please Scan ID");
+	
 
 }
 
@@ -233,9 +231,7 @@ void loop(){
 
 	//reset button state
 	buttonState1 = 1;
-	buttonState2 = 1;
 
-  receivedTag=false;
   int TNLeaveLoop = 0;
   int countToFive = 0;
   int tempTimer = 0;
@@ -247,10 +243,19 @@ void loop(){
 	Serial.print(" / ");
 	Serial.print(countToloop); 
 	Serial.print(" \n ");
-	//lcd.noBacklight();
 
+	potVal = analogRead(potPin);    // read the potValue from the sensor
+	Serial.print("Selector Value : ");
+	Serial.println(potVal);
+	
+	if (potVal > 400 && potVal < 999) {
+		AttFunction1();
+		}
 	
 	//Reading from RFID
+	
+	ClearLCD();
+	lcd.print("Please Scan ID");
 	
 do {
 	successRead = getID(1); 	// sets successRead to 1 when we get read from reader otherwise 0
@@ -264,6 +269,12 @@ ClearLCD();
 lcd.print("User RFID allowed");
 delay(3000);
 
+ClearLCD();
+lcd.print("Select Error ID");
+Serial.println("Select Error ID");
+delay(3000);
+
+/* machine ID scan code, temporily disabled
 ClearLCD();
 lcd.print("Scan Machine ID");
 Serial.println("Scan Machine ID");
@@ -282,8 +293,10 @@ Serial.println("Machine ID OK");
 Serial.print("value of RFID = ");
 Serial.println(cellLocation);
 buzzerFunction(1);
+*/
 
 ClearLCD();
+
 //put Emp# check here
 lcd.print("Emp# : ");
 lcd.setCursor(7,0);
@@ -296,28 +309,29 @@ delay (2000);
 do {
 	potVal = analogRead(potPin);    // read the potValue from the sensor
 	Serial.println(potVal);
-	if (potVal > 100 && potVal < 286) {mbdc=1;}
-	else if (potVal > 297 && potVal < 323) {mbdc=2;}
-	else if (potVal > 334 && potVal < 360) {mbdc=3;}
-	else if (potVal > 371 && potVal < 397) {mbdc=4;}
-	else if (potVal > 408 && potVal < 434) {mbdc=5;}
-	else if (potVal > 445 && potVal < 471) {mbdc=6;}
-	else if (potVal > 482 && potVal < 508) {mbdc=7;}
-	else if (potVal > 519 && potVal < 545) {mbdc=8;}
-	else if (potVal > 556 && potVal < 582) {mbdc=9;}
-	else if (potVal > 593 && potVal < 619) {mbdc=10;}
-	else if (potVal > 630 && potVal < 656) {mbdc=11;}
-	else if (potVal > 667 && potVal < 693) {mbdc=12;}
-	else if (potVal > 704 && potVal < 730) {mbdc=13;}
-	else if (potVal > 741 && potVal < 767) {mbdc=14;}
-	else if (potVal > 778 && potVal < 804) {mbdc=15;}
-	else if (potVal > 815 && potVal < 841) {mbdc=16;}
-	else if (potVal > 852 && potVal < 878) {mbdc=17;}
-	else if (potVal > 889 && potVal < 915) {mbdc=18;}
-	else if (potVal > 926 && potVal < 952) {mbdc=19;}
-	else if (potVal > 963 && potVal < 989) {mbdc=20;}
+	if (potVal > 50 && potVal < 66) {mbdc=1;}
+	else if (potVal > 77 && potVal < 93) {mbdc=2;}
+	else if (potVal > 104 && potVal < 120) {mbdc=3;}
+	else if (potVal > 131 && potVal < 147) {mbdc=4;}
+	else if (potVal > 158 && potVal < 174) {mbdc=5;}
+	else if (potVal > 185 && potVal < 201) {mbdc=6;}
+	else if (potVal > 212 && potVal < 228) {mbdc=7;}
+	else if (potVal > 239 && potVal < 255) {mbdc=8;}
+	else if (potVal > 266 && potVal < 282) {mbdc=9;}
+	else if (potVal > 293 && potVal < 309) {mbdc=10;}
+	else if (potVal > 320 && potVal < 336) {mbdc=11;}
+	else if (potVal > 347 && potVal < 363) {mbdc=12;}
+	else if (potVal > 374 && potVal < 390) {mbdc=13;}
+	else if (potVal > 401 && potVal < 417) {mbdc=14;}
+	else if (potVal > 428 && potVal < 444) {mbdc=15;}
+	else if (potVal > 455 && potVal < 471) {mbdc=16;}
+	else if (potVal > 482 && potVal < 498) {mbdc=17;}
+	else if (potVal > 509 && potVal < 525) {mbdc=18;}
+	else if (potVal > 536 && potVal < 552) {mbdc=19;}
+	else if (potVal > 563 && potVal < 579) {mbdc=20;}
+	else if (potVal > 590 && potVal < 606) {mbdc=21;}
 	
-	delay(500);
+	delay(300);
 	yield();
 	ClearLCD();
 	lcd.print("Emp# : ");
@@ -328,9 +342,73 @@ do {
 	lcd.print(mbdc);
 	buttonState1 = digitalRead(startButton);    // read the potValue from the sensor
 	
-} while (buttonState1 == HIGH && buttonState2 == HIGH); 
-Serial.println("i'm here");
-if (buttonState1 == LOW && buttonState2 == HIGH) {
+} while (buttonState1 == HIGH); 
+
+ClearLCD();
+lcd.print("Select");
+lcd.setCursor(0,1);
+lcd.print("   Cell location");
+Serial.println("Select Cell location");
+delay(3000);
+
+buttonState1 = 1;
+
+do {
+	potVal = analogRead(potPin);    // read the potValue from the sensor
+	Serial.println(potVal);
+	if (potVal > 10 && potVal < 20) {cellLocation=1;}
+	else if (potVal > 31 && potVal < 41) {cellLocation=2;}
+	else if (potVal > 52 && potVal < 62) {cellLocation=3;}
+	else if (potVal > 73 && potVal < 83) {cellLocation=4;}
+	else if (potVal > 94 && potVal < 104) {cellLocation=5;}
+	else if (potVal > 115 && potVal < 125) {cellLocation=6;}
+	else if (potVal > 136 && potVal < 146) {cellLocation=7;}
+	else if (potVal > 157 && potVal < 167) {cellLocation=8;}
+	else if (potVal > 178 && potVal < 188) {cellLocation=9;}
+	else if (potVal > 199 && potVal < 209) {cellLocation=10;}
+	else if (potVal > 220 && potVal < 230) {cellLocation=11;}
+	else if (potVal > 241 && potVal < 251) {cellLocation=12;}
+	else if (potVal > 262 && potVal < 272) {cellLocation=13;}
+	else if (potVal > 283 && potVal < 293) {cellLocation=14;}
+	else if (potVal > 304 && potVal < 314) {cellLocation=15;}
+	else if (potVal > 325 && potVal < 335) {cellLocation=16;}
+	else if (potVal > 346 && potVal < 356) {cellLocation=17;}
+	else if (potVal > 367 && potVal < 377) {cellLocation=18;}
+	else if (potVal > 388 && potVal < 398) {cellLocation=19;}
+	else if (potVal > 409 && potVal < 419) {cellLocation=20;}
+	else if (potVal > 430 && potVal < 440) {cellLocation=21;}
+	else if (potVal > 451 && potVal < 461) {cellLocation=22;}
+	else if (potVal > 472 && potVal < 482) {cellLocation=23;}
+	else if (potVal > 493 && potVal < 503) {cellLocation=24;}
+	else if (potVal > 514 && potVal < 524) {cellLocation=25;}
+	else if (potVal > 535 && potVal < 545) {cellLocation=26;}
+	else if (potVal > 556 && potVal < 566) {cellLocation=27;}
+	else if (potVal > 577 && potVal < 587) {cellLocation=28;}
+	else if (potVal > 598 && potVal < 608) {cellLocation=29;}
+	else if (potVal > 619 && potVal < 629) {cellLocation=30;}
+	else if (potVal > 640 && potVal < 650) {cellLocation=31;}
+	else if (potVal > 661 && potVal < 671) {cellLocation=32;}
+	else if (potVal > 682 && potVal < 692) {cellLocation=33;}
+	else if (potVal > 703 && potVal < 713) {cellLocation=34;}
+	else if (potVal > 724 && potVal < 734) {cellLocation=35;}
+	else if (potVal > 745 && potVal < 755) {cellLocation=36;}
+
+
+	delay(300);
+	yield();
+	ClearLCD();
+	lcd.print("Cell ");
+	lcd.setCursor(0,1);
+	lcd.print("Location : ");
+	lcd.print(cellLocation);
+	buttonState1 = digitalRead(startButton);    // read the potValue from the sensor
+	
+} while (buttonState1 == HIGH); 
+
+	ClearLCD();
+	lcd.print("Sending data");
+
+if (buttonState1 == LOW) {
 	Serial.print("Start");
 
 	//SQL start
@@ -351,10 +429,8 @@ if (buttonState1 == LOW && buttonState2 == HIGH) {
 	//conn.close();
 	// SQL end
 
-	ClearLCD();
-	lcd.print("Sending data");
 	lcd.setCursor(0,1);
-	lcd.print("Thanks you!");
+	lcd.print("Thank you!");
 	TNLeaveLoop = 2;
 	delay (2000);
 	result = 0;
@@ -364,21 +440,6 @@ if (buttonState1 == LOW && buttonState2 == HIGH) {
 	lcd.print("Please Scan ID");
 
 	buttonState1=1;
-}
-
-if (buttonState1 == HIGH && buttonState2 == LOW){
-	Serial.print("Cancel");
-	ClearLCD();
-	lcd.setCursor(0,0);
-	lcd.print("Cancel!");
-	TNLeaveLoop = 2;
-	delay (2000);
-	result = 0;
-	mbdc = 0;
-	EmpCd = 0;
-	ClearLCD();
-	lcd.print("Please Scan ID");
-	buttonState2=1;
 }
 
 if (countToFive > 6000 ){
@@ -479,7 +540,7 @@ int getID( int number) {
 	buzzerFunction(1);
 	lcd.print("RFID found");
 	lcd.setCursor(0,1);
-	lcd.print("Checking RFID");
+	lcd.print("Checking AUTH");
   for (int i = 0; i < 4; i++) {  //
 	lastReadCard[i] = readCard[i];
     readCard[i] = mfrc522.uid.uidByte[i];
@@ -666,10 +727,9 @@ boolean isMaster( byte test[] ) {
     return false;
 }
 
-/*
+
 int AttFunction1 () {
-	//AttFunction = analogRead(AttFunctionButton);
-  if (AttFunction > 0){
+
 	Serial.print("Attendance mode ");
 	buzzerFunction(2);
 	ClearLCD();
@@ -677,227 +737,142 @@ int AttFunction1 () {
 	lcd.setCursor(0,1);
 	lcd.print("Scan ID :");
 	delay(5000);
-	buzzerFunction(1);
+
+	do {
+		successRead = getID(1); 	// sets successRead to 1 when we get read from reader otherwise 0
+		delay(10);
+		yield();
+	} while (!successRead); 	//the program will not go further while you not get a successful read
+
+	EmpCd = successRead;
+	//LCD
+	ClearLCD();
+	lcd.print("User RFID allowed");
+	delay(3000);
 	
-	//check RFID if valid machine
-		do {
-			if (1 > 0){
-				BytesRead = rfidReader.readBytesUntil(3, tagNumber, 15);//EOT (3) is the last character in tag 
-				buzzerFunction(1);
-				Serial.println("Got employee ID tag");    
-				delay(1);
-				
-				while (rfidReader.available() > 0) {
-					rfidReader.read();
-				}
-				delay(1);
-				
-				tagString=tagNumber;
-				Serial.println();
-				Serial.print("Tag Number: ");
-				Serial.println(tagString);
-				tagString.substring(3,11).toCharArray(realTagNum, sizeof(realTagNum));
-				Serial.println(realTagNum);
-				result = hex2int(realTagNum, 8);
-				//tag number
-				Serial.println(result);
-				
-				if (result <= 0) {
-					receivedTag=false;
-					} else {
-						receivedTag=true;
-						}
-			}
-			
-			if (receivedTag){
-				
-				MySQL_Cursor *cur_mem121 = new MySQL_Cursor(&conn);
-				SQLserverConnect();	
-				tagString=tagNumber;
-				EmpCd = 0;
-    
-				delay(500);
-				row_values *row = NULL;
-				Serial.println("SQL query to search for employee ID");
-				// Initiate the query class instance
-				//MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
-				sprintf(query, QUERY_FNDMECHEMPID, result);
-				// Execute the query
-				cur_mem121->execute(query);
-				Serial.print("value of char = ");
-				Serial.println(query);
-				// Fetch the columns (required) but we don't use them.
-				column_names *columns = cur_mem121->get_columns();
-				// Read the row (we are only expecting the one)
-					
-					lcd.backlight();
-					ClearLCD();
-					lcd.print("Checking ID Tag");
-				
-				do {
-					row = cur_mem121->get_next_row();
-					if (row != NULL) {
-						EmpCd = atol(row->values[0]);
-						Serial.print("value of SpecialSerial = ");
-						Serial.println(EmpCd);
-						SpecialSerial=EmpCd;
-					}
-				} while (row != NULL);
-				// Deleting the cursor also frees up memory used
-				//delete cur_mem;
-				//conn.close();
-				
-				if (SpecialSerial != 0) {
-					Serial.println("Employee ID OK");
-					ClearLCD();
-					lcd.print("Employee ID OK");
-					delay(3000);
-					SmRfidDone = 1;
-				} else {
-					Serial.println("RFID is not allowed");
-					ClearLCD();
-					lcd.print("ID is not allowed");
-					delay(3000);
-					ClearLCD();
-					lcd.print("Scan Emp ID");
-					result=0;
-					receivedTag=0;
-				} 
-			}
-			
-		delay (200);
-		Serial.print("1");
-		} while (SmRfidDone != 1);
-		//end rfid check
-	
-	TNLeaveLoop = 0;
-	
-	while (TNLeaveLoop < 1) {
-		ClearLCD();
-		lcd.print("In/Out|Break S/E");
-		lcd.setCursor(0,1);
-		potVal = analogRead(potPin);    // read the potValue from the sensor
-		if (potVal > 100 && potVal < 371) {AttCode=0; lcd.print("Time In");}
-		else if (potVal > 372 && potVal < 508) {AttCode=1; lcd.print("Time Out");}
-		else if (potVal > 519 && potVal < 667) {AttCode=2; lcd.print("Break Start");}
-		else if (potVal > 668 && potVal < 989) {AttCode=3; lcd.print("Break End");}
+	buttonState1 = 1;
 		
-		if (buttonState1 == LOW && buttonState2 == HIGH) {
-			
-			//time in function
-				if (AttCode == 0) {
-					Serial.print("Start log In");
-					//SQL start
-					//row_values *row = NULL;
-					SQLserverConnect();
-					//char taskID
-					delay(500);
-					Serial.println("SQL query sending attendance IN");
-					// Initiate the query class instance
-					MySQL_Cursor *cur_mem62 = new MySQL_Cursor(&conn);
-					sprintf(query, QUERY_MECHSTART, SpecialSerial, SpecialSerial);
-					// Execute the query
-					cur_mem62->execute(query);
-					Serial.print("value of char = ");
-					Serial.println(query);
-					delay(500);
-					//delete cur_mem;
-					//conn.close();
-					// SQL end
-					
-					ClearLCD();
-					lcd.print("Log IN");
-					lcd.setCursor(0,1);
-					lcd.print("Thanks you!");
-					TNLeaveLoop = 2;
-					delay (2000);
-					result = 0;
-					mbdc = 1;
-					EmpCd = 0;
-					SmRfidDone = 0;
-				}
-			
-			
-			//time out function
-				if (AttCode == 1) {
-					Serial.print("Start log Off");
-					//SQL start
-					//row_values *row = NULL;
-					SQLserverConnect();
-					//char taskID
-					delay(500);
-					Serial.println("SQL query sending attendance OFF");
-					// Initiate the query class instance
-					MySQL_Cursor *cur_mem62 = new MySQL_Cursor(&conn);
-					sprintf(query, QUERY_MECHEND, SpecialSerial, SpecialSerial);
-					// Execute the query
-					cur_mem62->execute(query);
-					Serial.print("value of char = ");
-					Serial.println(query);
-					delay(500);
-					//delete cur_mem;
-					//conn.close();
-					// SQL end
-					
-					ClearLCD();
-					lcd.print("Log IN");
-					lcd.setCursor(0,1);
-					lcd.print("Thanks you!");
-					TNLeaveLoop = 2;
-					delay (2000);
-					result = 0;
-					mbdc = 1;
-					EmpCd = 0;
-					SmRfidDone = 0;
-					}
-			
-			//break start function
-			
-			//break end function
-			
-			buttonState1=1;
-		}
-		
-		if (buttonState1 == HIGH && buttonState2 == LOW){
-					Serial.print("Attendance cancelled!");
-						ClearLCD();
-						lcd.setCursor(0,0);
-						lcd.print("Cancelled!");
-						TNLeaveLoop = 2;
-						delay (2000);
-						result = 0;
-						mbdc = 0;
-						EmpCd = 0;
-						ClearLCD();
-						lcd.print("Please Scan ID");
-						buttonState2=1;
-		}
-		
-		if (countToFive > 6000 ){
-			Serial.print("Timout Resetting");
+	do {
+			yield();
 			ClearLCD();
-			lcd.print("Task Timeout");
+			lcd.print("In/Out|Break S/E");
 			lcd.setCursor(0,1);
-			lcd.print("Resetting");
-					
-			buzzerFunction(4);
-			delay(2000);
-			ESP.restart();
-		}
-				
-		delay(100);
-		Serial.print(countToFive);
-		countToFive++;
+			potVal = analogRead(potPin);    // read the potValue from the sensor
+			if (potVal > 1 && potVal < 199) {AttCode=0; lcd.print("Time In");}
+			else if (potVal > 200 && potVal < 299) {AttCode=1; lcd.print("Time Out");}
+			else if (potVal > 300 && potVal < 399) {AttCode=2; lcd.print("Break Start");}
+			else if (potVal > 400 && potVal < 999) {AttCode=3; lcd.print("Break End");}
+			buttonState1 = digitalRead(startButton);    // read the potValue from the sensor
+			delay(100);
+	
+	} while (buttonState1 == HIGH); 
+	
+	AttendanceCode(AttCode);
+	
+	/*
+	//time in function
+	if (AttendanceCode == 0) {
 		
-		AttFunction = analogRead(AttFunctionButton);
-		if (AttFunction = 0){TNLeaveLoop = 0;}
-	}
+		ClearLCD();
+		lcd.print("Logging IN");
 	
-	TNLeaveLoop = 0;
-	delay(2000);
-	
-	  
+		Serial.print("Start log In");
+		//SQL start
+		//row_values *row = NULL;
+		SQLserverConnect();
+		//char taskID
+		delay(500);
+		Serial.println("SQL query sending attendance IN");
+		// Initiate the query class instance
+		MySQL_Cursor *cur_mem62 = new MySQL_Cursor(&conn);
+		sprintf(query, QUERY_MECHSTART, EmpCd, EmpCd);
+		// Execute the query
+		cur_mem62->execute(query);
+		Serial.print("value of char = ");
+		Serial.println(query);
+		delay(500);
+		//delete cur_mem;
+		conn.close();
+		// SQL end
+
+
+	lcd.setCursor(0,1);
+	lcd.print("Thank you!");
 	}
 
+if (AttCode == 1) {
+	
+	ClearLCD();
+	lcd.print("Logging OFF");
+
+	Serial.print("Start log Off");
+	//SQL start
+	//row_values *row = NULL;
+	SQLserverConnect();
+	//char taskID
+	delay(500);
+	Serial.println("SQL query sending attendance OFF");
+	// Initiate the query class instance
+	MySQL_Cursor *cur_mem62 = new MySQL_Cursor(&conn);
+	sprintf(query, QUERY_MECHEND, EmpCd, EmpCd);
+	// Execute the query
+	cur_mem62->execute(query);
+	Serial.print("value of char = ");
+	Serial.println(query);
+	delay(500);
+	//delete cur_mem;
+	conn.close();
+	// SQL end
+
+	lcd.setCursor(0,1);
+	lcd.print("Thank you!");
 }
+
+//break start function
+
+//break end function
 */
+}
+
+///////////////////////////////////////// update attendance / break status ///////////////////////////////////
+int AttendanceCode( int number) {
+	
+	ClearLCD();
+	yield();
+	MySQL_Cursor *cur_mem = new MySQL_Cursor(&conn);
+	
+	if (number == 0){
+		lcd.print("Logging IN");
+		sprintf(query, QUERY_MECHSTART, EmpCd, EmpCd);
+		Serial.print("Excecute Logging IN");
+	}
+	else if (number == 1) {
+		lcd.print("Logging OFF");
+		sprintf(query, QUERY_MECHEND, EmpCd, EmpCd);
+		Serial.print("Excecute Logging OFF");
+	}
+	else if (number == 2) {
+		lcd.print("Break START");
+		sprintf(query, QUERY_MECHBSTART, EmpCd, EmpCd);
+		Serial.print("Excecute Break START");
+	}
+	else if (number == 3) {
+		lcd.print("Break END");
+		sprintf(query, QUERY_MECHBEND, EmpCd, EmpCd);
+		Serial.print("Excecute Break END");
+	}
+	
+	cur_mem->execute(query);
+	Serial.println(query);
+	//column_names *cols = cur_mem->get_columns();
+	
+	lcd.setCursor(0,1);
+	lcd.print("Thank you!");
+	
+	delete cur_mem;
+	conn.close();
+	
+	Serial.println(F("SQL disconnected"));
+    Serial.println(F("Succesfully added/updated attendance/break record to SQL"));
+	ESP.restart();
+}
