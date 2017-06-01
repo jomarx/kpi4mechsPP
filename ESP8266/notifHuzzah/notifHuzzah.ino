@@ -39,15 +39,6 @@ Created by: Dr. Charles A. Bell
 Modified by: f41ardu for use with nodemcu
 
 */
-/* 
- * Demo for SSD1306 based 128x64 OLED module using Adafruit SSD1306 
- * library (https://github.com/adafruit/Adafruit_SSD1306).
- * 
- * See https://github.com/pacodelgado/arduino/wiki/SSD1306-based-OLED-connected-to-Arduino 
- * for more information.
- *
- */
-
  /*
 
  Udp NTP Client
@@ -109,14 +100,14 @@ SSD1306 display(0x3c, 4, 5);
 #include <MySQL_Cursor.h>
 
 
-IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
-//IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
+//IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
+IPAddress server_addr(192,168,193,17); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 
 // Sample query
 //char query[] = "SELECT population FROM world.city WHERE name = 'New York'";
-char QUERY_POP[] = "SELECT ID, location FROM kpi_mech.task_db WHERE NotifNo = %d AND Status = 1 ORDER BY Severity ASC limit 1; ";
+char QUERY_POP[] = "SELECT ID, location FROM kpi_mech.task_db WHERE NotifNo = 1 AND (Status = 2 OR Status = 1) ORDER BY Severity ASC limit 1";
 char QUERY_UPDATE_2[] = "UPDATE kpi_mech.task_db SET Status = 2 WHERE ID = %lu; ";
 char QUERY_UPDATE_3[] = "UPDATE kpi_mech.task_db SET Status = 3 WHERE ID = %lu; ";
 char QUERY_UPDATE_5[] = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = %lu; ";
@@ -193,7 +184,7 @@ int buttonState2 = 1;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 2;
+int mechanicID = 1;
 
 //ElapsedTime = time elpsed since start
 int ElapsedTime = 0;
@@ -204,7 +195,7 @@ void setup(){
 display.init();
 
 display.flipScreenVertically();
-display.setFont(ArialMT_Plain_10);
+display.setFont(ArialMT_Plain_16);
 
 pinMode(startButton, INPUT_PULLUP);
 pinMode(cancelButton, INPUT_PULLUP);
@@ -306,12 +297,13 @@ while (conn.connect(server_addr, 3306, user, password) != true) {
 
 displayClear();
 display.setTextAlignment(TEXT_ALIGN_CENTER);
-display.setFont(ArialMT_Plain_10);
 display.drawString(64, 22, "SQL connected!\n");
 display.display();
 }
 
 void loop(){
+
+Serial.println("Start loop");
 
 //reset button values	
 buttonState1 = 1;
@@ -328,10 +320,13 @@ delay(1000);
   
 int cb = udp.parsePacket();
   if (!cb) {
+		displayClear();
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 22, "Getting time\n");
+		display.display();
+		
 	  Serial.println("no packet yet");
-	  displayClear();
-	  display.print("\n");
-	  display.display();
+	  
 	  } else {
       Serial.print("packet received, length=");
       Serial.println(cb);
@@ -400,20 +395,18 @@ int tz = 8;                                            // adjust for PH time
 
 displayClear();
 
-      if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
-      if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
-      if(ns < 10) display.print(F("0")); display.print(ns);                       // print the second
+     PrintTime();
 
-      display.print(F(" - "));                                        // Local date
-      if(nmo < 10) display.print(F("0")); display.print(nmo);  display.print(F("/"));        // print the month
-      if(ndy < 10) display.print(F("0")); display.print(ndy); display.print(F("/"));                   // print the day
-      if(nyr < 10) display.print(F("0")); display.print(nyr);          // print the year
-      display.println();      
-
-display.display();
 //mod end
 }
 //NTP End
+
+displayClear();
+
+		displayClear();
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 22, "Getting Tasks\n");
+		display.display();
 
 //SQL start
 row_values *row = NULL;
@@ -452,31 +445,20 @@ conn.close();
 
 // deep sleep for 15mins if no task
 if (cellLocation == 0) {
+	displayClear();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
-    display.setFont(ArialMT_Plain_10);
     display.drawString(64, 22, "No task,\n sleeping for 15mins");
 	Serial.println("No task,\n sleeping for 15mins");
 	display.display();
 	buzzerFunction(1);
 	delayer(5);
 	displayClear();
-	display.display();
 	delay(100);
 	ESP.deepSleep(60000000*15);
 	//sleep esp8266 for 15mins
 	ESP.restart();
 }
   
-//screen
-/*
-display.print("123456789012345678901\n");
-display.print("Hanesbrand \n");
-display.print("prob loc: ");
-display.print(taskID);
-display.display();
-buzzerFunction(1);
-*/
-//task detected
 
 int TNLeaveLoop = 0;
 int countToFifteen = 0;
@@ -506,20 +488,27 @@ display.print("START           END");
 
 displayClear();
 display.setTextAlignment(TEXT_ALIGN_LEFT);
-display.setFont(ArialMT_Plain_10);
 display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
-display.drawString(0, 10, "Sew Line # " + String(cellLocation));
-display.drawString(0, 20, "ACK Time left :" + String(MinLeft));
-display.drawString(0, 30, "START           END");
+display.drawString(0, 15, "Sew Line # " + String(cellLocation));
+display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
+display.drawString(0, 45, "START         END");
 
 display.display();
 buzzerFunction(5);
  
 while (TNLeaveLoop < 1) {
+	yield();
 	//buttonState1 = digitalRead(startButton);
 	//buttonState2 = digitalRead(cancelButton);
 		
 	if (buttonState1 == LOW && buttonState2 == HIGH){
+		
+		displayClear();
+		display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
+		display.drawString(0, 15, "Sew Line # " + String(cellLocation));
+		display.drawString(0, 30, "<Task Done>");
+		display.display();
+		
 		SQLserverConnect();
 		Serial.println("Starting task, update DB");
 		ElapsedTime=0;
@@ -554,7 +543,6 @@ while (TNLeaveLoop < 1) {
 		buzzerFunction(2);
 		
 				
-			displayClear();
 			/*			
 			if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
 			if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
@@ -573,16 +561,18 @@ while (TNLeaveLoop < 1) {
 			if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
 			if(ns < 10) display.print(F("0")); display.print(ns);
 			display.print("\n*/
-			display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
-			display.drawString(0, 10, "Sew Line # " + String(cellLocation));
-			display.drawString(0, 30, "<Task Done>");
-			display.display();
+
 		
 		buttonState1 = HIGH; //reset button status
+		
 		Serial.print("starting loop to wait to finish task");
 		for (int tempTimer = 0;tempTimer <= 3;tempTimer++)  {
 			//buttonState1 = digitalRead(startButton);
 			delay(200);
+			
+				if (buttonState1 == HIGH && buttonState2 == LOW){
+					CancelTask();		
+				}
 			
 			if (buttonState1 == HIGH){
 				tempTimer = 0;
@@ -612,12 +602,10 @@ while (TNLeaveLoop < 1) {
 				display.display();
 				*/
 				
-				display.setFont(ArialMT_Plain_10);
-				display.drawString(0, 0, "Start time: ");
-				display.drawStringMaxWidth(0, 10, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
-				display.drawString(0, 20, "Elapsed Time: " + String(ElapsedTime) + " mins");
+				display.drawStringMaxWidth(0, 0, 128,"ST:" + String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
+				display.drawString(0, 15, "Elapsed Time: " + String(ElapsedTime) + "mins");
 				display.drawString(0, 30, "Sew Line #: " + String(cellLocation));
-				display.drawString(0, 30, "<Task Done>");
+				display.drawString(0, 45, "<Task Done>");
 				display.display();
 				
 				
@@ -640,8 +628,7 @@ while (TNLeaveLoop < 1) {
 		displayClear();
 				
 		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.setFont(ArialMT_Plain_10);
-		display.drawString(64, 22, "Task Done \n \n Requesting new task \n");
+		display.drawString(64, 8, "Task Done\n Requesting new task \n");
 		
 		display.display();
 
@@ -667,44 +654,19 @@ while (TNLeaveLoop < 1) {
 		//delete cur_mem;
 		// SQL end
 		buzzerFunction(2);
+		ESP.restart();
 		conn.close();
 		TNLeaveLoop = 2;
 		buttonState2 == HIGH;
 	}
 	
 	if (buttonState1 == HIGH && buttonState2 == LOW){
-		//SQL start
-		//row_values *row = NULL;
-		//char taskID
-		SQLserverConnect();
-		delay(500);
-		Serial.println("SQL query to cancel task");
-		// Initiate the query class instance
-		MySQL_Cursor *cur_mem3 = new MySQL_Cursor(&conn);
-		sprintf(query, QUERY_UPDATE_5, taskID);
-		// Execute the query
-		cur_mem3->execute(query);
-		//delete cur_mem;
-		delay(500);
-		sprintf(query, QUERY_CANCELLED, taskID, mechanicID);
-		// Execute the query
-		cur_mem3->execute(query);
-		delay(500);
-		sprintf(query, QUERY_AVAILABLE, mechanicID, taskID);
-		Serial.println("sql to update mech availability");
-		cur_mem3->execute(query);
-		// SQL end
-		conn.close();
-		Serial.print("cancel!! \n");
-		Serial.print("task should auto assign. \n");
-		buzzerFunction(4);
-		TNLeaveLoop = 2;	
-		cellLocation = 0;
-		taskID = 0;
-		delay(200);
-		displayClear();
+		CancelTask();		
 	}
-	if (countToMinute > 1200 ){
+	
+	yield();
+	
+	if (countToMinute > 1200 && TNLeaveLoop < 1){
 			displayClear();
 			/*
 			if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
@@ -724,11 +686,10 @@ while (TNLeaveLoop < 1) {
 			display.print("START           END");
 			*/
 			display.setTextAlignment(TEXT_ALIGN_LEFT);
-			display.setFont(ArialMT_Plain_10);
 			display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
-			display.drawString(0, 10, "Sew Line # " + String(cellLocation));
-			display.drawString(0, 20, "ACK Time left :" + String(MinLeft));
-			display.drawString(0, 30, "START           END");
+			display.drawString(0, 15, "Sew Line # " + String(cellLocation));
+			display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
+			display.drawString(0, 45, "START         END");
 			display.display();
 			
 			MinLeft--;
@@ -736,8 +697,14 @@ while (TNLeaveLoop < 1) {
 			//Serial.print("function to update DB, timeout");
 			buzzerFunction(5);
 	}
-	if (countToFifteen > 18000 ){
+	if (countToFifteen > 18000 && TNLeaveLoop < 1){
 		Serial.println("function to update DB, 15mins have past, auto assign");
+		
+		displayClear();
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 22, "No ACK!\nTransferring");
+		display.display();
+		
 		//SQL start
 		//row_values *row = NULL;
 		//char taskID
@@ -767,15 +734,18 @@ while (TNLeaveLoop < 1) {
 		displayClear();
 	}
 
-	Serial.print(countToFifteen);
+	
+	Serial.print("countToFifteen: ");
+	Serial.println(countToFifteen);
 	countToFifteen++;
 	countToMinute++;
 	delay(50);
-	
+	/*
 	Serial.print("value of TNLeaveLoop: ");
 	Serial.println(TNLeaveLoop);
 	Serial.println(buttonState1);
-	Serial.println(buttonState2);
+	Serial.println(buttonState2);*/
+	yield();
 	
 }
 
@@ -869,4 +839,60 @@ void cancelButtonChange() {
 	
 }
 
+void PrintTime() {
+	if(nh < 10) display.print(F(" ")); display.print(nh);  display.print(F(":"));          // print the hour 
+	if(nm < 10) display.print(F("0")); display.print(nm);  display.print(F(":"));          // print the minute
+	if(ns < 10) display.print(F("0")); display.print(ns);                       // print the second
+
+	display.print(F(" - "));                                        // Local date
+	if(nmo < 10) display.print(F("0")); display.print(nmo);  display.print(F("/"));        // print the month
+	if(ndy < 10) display.print(F("0")); display.print(ndy); display.print(F("/"));                   // print the day
+	if(nyr < 10) display.print(F("0")); display.print(nyr);          // print the year
+	display.println();
+	display.display();	  
+}
+
+void CancelTask() {
+	
+	yield();
+	Serial.println("Checking if I can cancel task");
+	
+	if (cellLocation > 0) {
+		displayClear();
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 18, "Task cancelled!\nReassigning");
+		display.display();
+		
+		SQLserverConnect();
+		delay(500);
+		Serial.println("SQL query to cancel task");
+		// Initiate the query class instance
+		MySQL_Cursor *cur_mem3 = new MySQL_Cursor(&conn);
+		sprintf(query, QUERY_UPDATE_5, taskID);
+		// Execute the query
+		cur_mem3->execute(query);
+		//delete cur_mem;
+		delay(500);
+		sprintf(query, QUERY_CANCELLED, taskID, mechanicID);
+		// Execute the query
+		cur_mem3->execute(query);
+		delay(500);
+		sprintf(query, QUERY_AVAILABLE, mechanicID, taskID);
+		Serial.println("sql to update mech availability");
+		cur_mem3->execute(query);
+		// SQL end
+		conn.close();
+		Serial.print("cancel!! \n");
+		Serial.print("task should auto assign. \n");
+		buzzerFunction(4);
+		/*
+		TNLeaveLoop = 2;	
+		cellLocation = 0;
+		taskID = 0;
+		delay(200);
+		displayClear();*/
+		
+		ESP.restart();
+	}
+}
 
