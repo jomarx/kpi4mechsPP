@@ -107,7 +107,7 @@ char password[] = "secret"; // MySQL user login password
 
 // Sample query
 //char query[] = "SELECT population FROM world.city WHERE name = 'New York'";
-char QUERY_POP[] = "SELECT ID, location FROM kpi_mech.task_db WHERE NotifNo = 1 AND (Status = 2 OR Status = 1) ORDER BY Severity ASC limit 1";
+char QUERY_POP[] = "SELECT ID, location, EmpNo FROM kpi_mech.task_db WHERE NotifNo = %lu AND (Status = 2 OR Status = 1) ORDER BY Severity ASC limit 1";
 char QUERY_UPDATE_2[] = "UPDATE kpi_mech.task_db SET Status = 2 WHERE ID = %lu; ";
 char QUERY_UPDATE_3[] = "UPDATE kpi_mech.task_db SET Status = 3 WHERE ID = %lu; ";
 char QUERY_UPDATE_5[] = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = %lu; ";
@@ -185,6 +185,9 @@ int buttonState2 = 1;
 //mechanic ID
 //static NotifNo that will be default per device.
 int mechanicID = 1;
+
+//empID currently assigned to notificator
+int EmpNo = 0;
 
 //ElapsedTime = time elpsed since start
 int ElapsedTime = 0;
@@ -436,6 +439,9 @@ do {
 		cellLocation = atol(row->values[1]);
 		Serial.print("value of cellLocation = ");
 		Serial.println(cellLocation);
+		cellLocation = atol(row->values[2]);
+		Serial.print("value of EmpNo = ");
+		Serial.println(EmpNo);
 		}
 	} while (row != NULL);
 // Deleting the cursor also frees up memory used
@@ -716,7 +722,7 @@ while (TNLeaveLoop < 1) {
 		// Execute the query
 		cur_mem3->execute(query);
 		delay(500);
-		sprintf(query, QUERY_TIMEOUT, taskID, mechanicID);
+		sprintf(query, QUERY_TIMEOUT, taskID, EmpNo);
 		// Execute the query
 		cur_mem3->execute(query);
 		delay(500);
@@ -873,7 +879,7 @@ void CancelTask() {
 		cur_mem3->execute(query);
 		//delete cur_mem;
 		delay(500);
-		sprintf(query, QUERY_CANCELLED, taskID, mechanicID);
+		sprintf(query, QUERY_CANCELLED, taskID, EmpNo);
 		// Execute the query
 		cur_mem3->execute(query);
 		delay(500);
