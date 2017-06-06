@@ -59,6 +59,20 @@ Modified by: f41ardu for use with nodemcu
 
  */
  
+#include <Adafruit_NeoPixel.h>
+
+#define PIN 15
+#define NUMPIXELS      1
+ 
+// Parameter 1 = number of pixels in strip
+// Parameter 2 = pin number (most are valid)
+// Parameter 3 = pixel type flags, add together as needed:
+//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
+//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
+//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
+//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800); 
+ 
 //#include <SPI.h>
 #include <Wire.h>
 //#include <Adafruit_GFX.h>
@@ -107,7 +121,7 @@ char password[] = "secret"; // MySQL user login password
 
 // Sample query
 //char query[] = "SELECT population FROM world.city WHERE name = 'New York'";
-char QUERY_POP[] = "SELECT ID, location, EmpNo FROM kpi_mech.task_db WHERE NotifNo = %lu AND (Status = 2 OR Status = 1) ORDER BY Severity ASC limit 1";
+char QUERY_POP[] = "SELECT ID, location, EmpNo FROM kpi_mech.task_db WHERE NotifNo = %lu AND (Status = 2 OR Status = 1) ORDER BY Severity ASC limit 1;";
 char QUERY_UPDATE_2[] = "UPDATE kpi_mech.task_db SET Status = 2 WHERE ID = %lu; ";
 char QUERY_UPDATE_3[] = "UPDATE kpi_mech.task_db SET Status = 3 WHERE ID = %lu; ";
 char QUERY_UPDATE_5[] = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = %lu; ";
@@ -192,7 +206,14 @@ int EmpNo = 0;
 //ElapsedTime = time elpsed since start
 int ElapsedTime = 0;
 
+//neopixel stuffs
+int BlinkState = 0;
+int countToSec = 0;
+
+
 void setup(){  
+
+WiFi.mode(WIFI_STA);
 
 // Initialising the UI will init the display too.
 display.init();
@@ -302,6 +323,10 @@ displayClear();
 display.setTextAlignment(TEXT_ALIGN_CENTER);
 display.drawString(64, 22, "SQL connected!\n");
 display.display();
+
+strip.begin();
+strip.show(); // Initialize all pixels to 'off'
+
 }
 
 void loop(){
@@ -439,7 +464,7 @@ do {
 		cellLocation = atol(row->values[1]);
 		Serial.print("value of cellLocation = ");
 		Serial.println(cellLocation);
-		cellLocation = atol(row->values[2]);
+		EmpNo = atol(row->values[2]);
 		Serial.print("value of EmpNo = ");
 		Serial.println(EmpNo);
 		}
@@ -460,6 +485,8 @@ if (cellLocation == 0) {
 	delayer(5);
 	displayClear();
 	delay(100);
+	yield();
+	OffNeoPixel();
 	ESP.deepSleep(60000000*15);
 	//sleep esp8266 for 15mins
 	ESP.restart();
@@ -492,6 +519,11 @@ display.print("\n");
 display.print("START           END");
 */
 
+//set neopixel to red
+strip.setPixelColor(0, 255, 0, 0);
+strip.setBrightness(64);
+strip.show();
+
 displayClear();
 display.setTextAlignment(TEXT_ALIGN_LEFT);
 display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
@@ -506,8 +538,15 @@ while (TNLeaveLoop < 1) {
 	yield();
 	//buttonState1 = digitalRead(startButton);
 	//buttonState2 = digitalRead(cancelButton);
+	
+	if (countToSec > 15){
+		BlinkNeoPixel();
+		countToSec = 0;
+	}
 		
 	if (buttonState1 == LOW && buttonState2 == HIGH){
+		
+		OffNeoPixel ();
 		
 		displayClear();
 		display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
@@ -587,6 +626,7 @@ while (TNLeaveLoop < 1) {
 				buzzerFunction(2);
 				countToFifteenAgain = 0;
 			}
+			
 			if (countToMinute > 300){
 				buzzerFunction(1);
 				countToMinute = 0;
@@ -660,6 +700,9 @@ while (TNLeaveLoop < 1) {
 		//delete cur_mem;
 		// SQL end
 		buzzerFunction(2);
+		
+		OffNeoPixel();
+		
 		ESP.restart();
 		conn.close();
 		TNLeaveLoop = 2;
@@ -738,6 +781,7 @@ while (TNLeaveLoop < 1) {
 		taskID = 0;
 		delay(200);
 		displayClear();
+		OffNeoPixel ();
 	}
 
 	
@@ -745,6 +789,7 @@ while (TNLeaveLoop < 1) {
 	Serial.println(countToFifteen);
 	countToFifteen++;
 	countToMinute++;
+	countToSec++;
 	delay(50);
 	/*
 	Serial.print("value of TNLeaveLoop: ");
@@ -765,7 +810,8 @@ buttonState2 = 1;
   //sleep for 1min
   //ESP.deepSleep(60000000);
   //delayer(60);
-  	ESP.restart();
+	//OffNeoPixel ();
+  	//ESP.restart();
   
 }
 
@@ -897,8 +943,29 @@ void CancelTask() {
 		taskID = 0;
 		delay(200);
 		displayClear();*/
-		
+		OffNeoPixel ();
 		ESP.restart();
 	}
 }
 
+void OffNeoPixel () {
+	//set neopixel to red
+		strip.setPixelColor(0, 0, 0, 0);
+		strip.show();
+}
+
+int BlinkNeoPixel () {
+	if (BlinkState == 0) {
+		//set neopixel to red
+		strip.setPixelColor(0, 255, 0, 0);
+		strip.setBrightness(64);
+		strip.show();
+		BlinkState = 1;
+	}
+		else if (BlinkState == 1) {
+		//set neopixel to 0
+		OffNeoPixel ();
+		BlinkState = 0;
+	}
+	
+}
