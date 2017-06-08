@@ -63,7 +63,7 @@ char realTagNum[12];
 //const char* wpassword = "maquinay1";
 
 const char* ssid = "outsourcing1.25s";
-const char* wpassword = "dbafe12345!!!";
+const char* wpassword = "dbafe12345!!!!";
 
 //buzzer
 const int buzzer = 0;

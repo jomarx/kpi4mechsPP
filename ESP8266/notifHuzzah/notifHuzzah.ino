@@ -114,8 +114,8 @@ SSD1306 display(0x3c, 4, 5);
 #include <MySQL_Cursor.h>
 
 
-//IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
-IPAddress server_addr(192,168,193,17); // IP of the MySQL server here
+IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
+//IPAddress server_addr(192,168,193,17); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 
@@ -143,7 +143,7 @@ MySQL_Connection conn((Client *)&client);
 
 //wifi
 char ssid[] = "outsourcing1.25s"; // your SSID
-char pass[] = "dbafe12345!!!"; // your SSID Password
+char pass[] = "dbafe12345!!!!"; // your SSID Password
 //char ssid[] = "jomarAP-SP";  //  your network SSID (name)
 //char pass[] = "maquinay1";       // your network password
 // const char* host = "utcnist2.colorado.edu";
@@ -198,7 +198,7 @@ int buttonState2 = 1;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 1;
+int mechanicID = 2;
 
 //empID currently assigned to notificator
 int EmpNo = 0;
@@ -235,6 +235,14 @@ buzzerFunction(3);
 //start NTP
 Serial.begin(9600);
 Serial.println();
+
+displayClear();
+
+display.setTextAlignment(TEXT_ALIGN_CENTER);
+display.drawString(64, 22, "Mechanic ID :\n" + String(mechanicID));
+display.display();
+
+delayer(3);
 
 // We start by connecting to a WiFi network
 Serial.print("Connecting to ");
@@ -816,6 +824,7 @@ buttonState2 = 1;
 }
 
 int delayer(int dly){
+	Serial.print("Delaying : ");
 	for (int DelayDaw = 0; DelayDaw <= dly; DelayDaw++){
 		delay(1000);
 		Serial.print(DelayDaw);
