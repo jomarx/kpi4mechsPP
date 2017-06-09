@@ -1,0 +1,20 @@
+marvin ablasa
+glen vargas
+elmer nieva
+
+
+cel 8,9,10,12,13,15,16,17,20,23
+
+3, 24, 33, 31, 28
+
+send data
+
+http://www.icreateproject.info/uncategorized/arduino-save-data-to-database/
+
+https://forum.arduino.cc/index.php?topic=378994.0
+
+https://www.tweaking4all.com/hardware/arduino/arduino-ethernet-data-push/
+
+https://forum.arduino.cc/index.php?topic=320990.0
+
+http://forum.arduino.cc/index.php?topic=124289.0
