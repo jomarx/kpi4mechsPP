@@ -37,7 +37,7 @@ boolean programMode = false;	// initialize programming mode to false
 //const char *pass =  "maquinay1"; // change according to your Network
 
 const char *ssid =  "outsourcing1.25s";     // change according to your Network - cannot be longer than 32 characters!
-const char *pass =  "dbafe12345!!!"; // change according to your Network
+const char *pass =  "dbafe12345!!!!"; // change according to your Network
 
 MFRC522 mfrc522(SS_PIN, RST_PIN); // Create MFRC522 instance
 

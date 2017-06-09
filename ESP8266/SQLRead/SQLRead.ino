@@ -25,13 +25,13 @@
 #include <MySQL_Connection.h>
 #include <MySQL_Cursor.h>
 
-IPAddress server_addr(192,168,42,85); // IP of the MySQL server here
+IPAddress server_addr(192,168,143,220); // IP of the MySQL server here
 char user[] = "nodemcu1"; // MySQL user login username
 char password[] = "secret"; // MySQL user login password
 
 // WiFi card example
-char ssid[] = "jomarAP-SP"; // your SSID
-char pass[] = "maquinay1"; // your SSID Password
+char ssid[] = "outsourcing1.25s"; // your SSID
+char pass[] = "dbafe12345!!!!"; // your SSID Password
 
 // Sample query
 //char INSERT_SQL[] = "INSERT INTO test_arduino.hello_arduino (message) VALUES ('Hello, Arduino!')";
@@ -44,7 +44,7 @@ WiFiClient client;
 MySQL_Connection conn((Client *)&client);
 
 void setup() {
-Serial.begin(115200);
+Serial.begin(9600);
 // Begin WiFi section
 WiFi.begin(ssid, pass);
 // Wait for connection
