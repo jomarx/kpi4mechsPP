@@ -144,6 +144,8 @@ MySQL_Connection conn((Client *)&client);
 //wifi
 char ssid[] = "outsourcing1.25s"; // your SSID
 char pass[] = "dbafe12345!!!!"; // your SSID Password
+//char ssid[] = "outsourcing1.25"; // your SSID
+//char pass[] = "dbafe54321!"; // your SSID Password
 //char ssid[] = "jomarAP-SP";  //  your network SSID (name)
 //char pass[] = "maquinay1";       // your network password
 // const char* host = "utcnist2.colorado.edu";
@@ -198,7 +200,7 @@ int buttonState2 = 1;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 2;
+int mechanicID = 5;
 
 //empID currently assigned to notificator
 int EmpNo = 0;
@@ -213,127 +215,123 @@ int countToSec = 0;
 
 void setup(){  
 
-WiFi.mode(WIFI_STA);
+	WiFi.mode(WIFI_STA);
+	
+	buzzerFunction(3);
+	
+	delay(500);
+	Serial.begin(9600);
+	Serial.println();
+	
+	// We start by connecting to a WiFi network
+	Serial.print("Connecting to ");
+	Serial.println(ssid);
+	WiFi.begin(ssid, pass);
+	
+	int ResetCounter = 0;
+	while (WiFi.status() != WL_CONNECTED) {
+		delay(800);
+		Serial.print(".");
+		Serial.print(ResetCounter);
+		ResetCounter++;
+		yield();
+		if (ResetCounter >= 30) {
+			Serial.print("ESP8266 reset!");
+			
+			display.init();
 
-// Initialising the UI will init the display too.
-display.init();
+			display.flipScreenVertically();
+			display.setFont(ArialMT_Plain_16);
+			
+			displayClear();
+			display.setTextAlignment(TEXT_ALIGN_CENTER);
+			display.drawString(64, 22, "ESP8266 reset!");
+			display.display();
+			delayer(2);
+			ESP.restart();
+		  }
+	}
+	
+	String wfms = WiFi.macAddress();
+	Serial.print("MAC address : ");
+	Serial.println(wfms);
 
-display.flipScreenVertically();
-display.setFont(ArialMT_Plain_16);
+	// Initialising the UI will init the display too.
+	display.init();
 
-pinMode(startButton, INPUT_PULLUP);
-pinMode(cancelButton, INPUT_PULLUP);
+	display.flipScreenVertically();
+	display.setFont(ArialMT_Plain_16);
 
-attachInterrupt(startButton, startButtonChange, CHANGE);
-attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
+	pinMode(startButton, INPUT_PULLUP);
+	pinMode(cancelButton, INPUT_PULLUP);
 
-//  Serial.begin(9600);
+	attachInterrupt(startButton, startButtonChange, CHANGE);
+	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
 
-//buzzer initialize
-buzzerFunction(3);
+	//start NTP
 
-//start NTP
-Serial.begin(9600);
-Serial.println();
+	displayClear();
 
-displayClear();
-
-display.setTextAlignment(TEXT_ALIGN_CENTER);
-display.drawString(64, 22, "Mechanic ID :\n" + String(mechanicID));
-display.display();
-
-delayer(3);
-
-// We start by connecting to a WiFi network
-Serial.print("Connecting to ");
-Serial.println(ssid);
-WiFi.begin(ssid, pass);
-
-displayClear();
-
-display.setTextAlignment(TEXT_ALIGN_CENTER);
-display.drawString(64, 22, "WIFI: Connecting");
-display.display();
-
-int ResetCounter = 0;
-while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    Serial.print(ResetCounter);
-    ResetCounter++;
-    if (ResetCounter >= 30) {
-		Serial.print("ESP8266 reset!");
-		
-		displayClear();
-		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.drawString(64, 22, "ESP8266 reset!");
-		display.display();
-		delayer(1);
-		ESP.restart();
-      }
-}
-
-//display.begin(SSD1306_SWITCHCAPVCC);
-display.display();
-delayer(1);
-display.clear();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 22, "Mechanic ID :\n" + String(mechanicID));
+	display.display();
+	
+	delayer(3);
+	displayClear();
+	
+	//display.begin(SSD1306_SWITCHCAPVCC);
+	display.display();
+	delayer(1);
+	display.clear();
   
-Serial.println("");
+	Serial.println("WiFi connected");
+	Serial.println("IP address: ");
+	Serial.println(WiFi.localIP());
+	delayer(2);
 
-displayClear();
-display.setTextAlignment(TEXT_ALIGN_CENTER);
-display.drawString(64, 22, "WIFI: Connecting");
-display.print("\n");
-display.display();
+	displayClear();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 22, "WIFI: Connected" );
+	display.print("\n");
+	display.display();
+	delayer(2);
 
-Serial.println("WiFi connected");
-Serial.println("IP address: ");
-Serial.println(WiFi.localIP());
-delayer(2);
+	Serial.println("Starting UDP");
+	udp.begin(localPort);
+	Serial.print("Local port: ");
+	Serial.println(udp.localPort());
+	//end NTP
 
-displayClear();
-display.setTextAlignment(TEXT_ALIGN_CENTER);
-display.drawString(64, 22, "WIFI: Connected" );
-display.print("\n");
-display.display();
-delayer(2);
+	displayClear();
+	 
+	//start SQL DB connection
+	Serial.println("DB - Connecting...");
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 22, "DB: Connecting");
+	display.display();
 
-Serial.println("Starting UDP");
-udp.begin(localPort);
-Serial.print("Local port: ");
-Serial.println(udp.localPort());
-//end NTP
+	ResetCounter = 0;
+	while (conn.connect(server_addr, 3306, user, password) != true) {
+		delay(800);
+		Serial.print( "." );
+		Serial.print(ResetCounter);
+		ResetCounter++;
+		if (ResetCounter >= 60) {
+			display.setTextAlignment(TEXT_ALIGN_CENTER);
+			display.drawString(64, 22, "DB: Cant connect \n Resetting");
+			Serial.print("SQL cannot connect");
+			Serial.print("ESP8266 reset!");
+			ESP.restart();
+		  }
+		}
 
-displayClear();
- 
-//start SQL DB connection
-Serial.println("DB - Connecting...");
-display.setTextAlignment(TEXT_ALIGN_CENTER);
-display.drawString(64, 22, "DB: Connecting");
-display.display();
+	displayClear();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 22, "SQL connected!\n");
+	display.display();
 
-ResetCounter = 0;
-while (conn.connect(server_addr, 3306, user, password) != true) {
-	delay(800);
-    Serial.print( "." );
-    Serial.print(ResetCounter);
-    ResetCounter++;
-    if (ResetCounter >= 60) {
-		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.drawString(64, 22, "DB: Cant connect \n Resetting");
-		Serial.print("SQL cannot connect");
-		Serial.print("ESP8266 reset!");
-		ESP.restart();
-      }
-    }
-
-displayClear();
-display.setTextAlignment(TEXT_ALIGN_CENTER);
-display.drawString(64, 22, "SQL connected!\n");
-display.display();
-
-strip.begin();
-strip.show(); // Initialize all pixels to 'off'
+	strip.begin();
+	strip.show(); // Initialize all pixels to 'off'
 
 }
 
