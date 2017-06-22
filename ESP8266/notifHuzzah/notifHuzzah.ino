@@ -59,10 +59,10 @@ Modified by: f41ardu for use with nodemcu
 
  */
  
-#include <Adafruit_NeoPixel.h>
+//#include <Adafruit_NeoPixel.h>
 
-#define PIN 15
-#define NUMPIXELS      1
+//#define PIN 15
+//#define NUMPIXELS      1
  
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = pin number (most are valid)
@@ -71,7 +71,8 @@ Modified by: f41ardu for use with nodemcu
 //   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800); 
+
+//Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800); 
  
 //#include <SPI.h>
 #include <Wire.h>
@@ -128,7 +129,7 @@ char QUERY_UPDATE_5[] = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = %lu; 
 char QUERY_UPDATE_6[] = "UPDATE kpi_mech.task_db SET Status = 6 WHERE ID = %lu; ";
 char QUERY_STARTTIME[] = "UPDATE kpi_mech.task_db SET StartTime = (Curtime()) WHERE ID = %lu; ";
 char QUERY_ENDTIME[] = "UPDATE kpi_mech.task_db SET EndTime = (Curtime()), EndDate = (now()) WHERE ID = %lu; ";
-char QUERY_AVAILABLE[] = "UPDATE kpi_mech.mech_db SET status = 0 WHERE mechanicID = %d; UPDATE kpi_mech.mbreak_db SET EndDate = (now()) WHERE TaskID = %d;";
+char QUERY_AVAILABLE[] = "UPDATE kpi_mech.mech_db SET status = 0 WHERE NotifNo = %d; UPDATE kpi_mech.mbreak_db SET EndDate = (now()) WHERE TaskID = %d;";
 char QUERY_CANCELLED[] = "insert into kpi_mech.cancel_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime()); ";
 char QUERY_TIMEOUT[] = "insert into kpi_mech.timeout_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime()); ";
 char query[256];
@@ -143,7 +144,7 @@ MySQL_Connection conn((Client *)&client);
 
 //wifi
 char ssid[] = "outsourcing1.25s"; // your SSID
-char pass[] = "dbafe12345!!!!"; // your SSID Password
+char pass[] = "dbafe12345!!"; // your SSID Password
 //char ssid[] = "outsourcing1.25"; // your SSID
 //char pass[] = "dbafe54321!"; // your SSID Password
 //char ssid[] = "jomarAP-SP";  //  your network SSID (name)
@@ -195,12 +196,14 @@ const int startButton = 12;
 const int cancelButton = 13;
 const int LockButton = 14;
 
+const int LedLight = 0;
+
 int buttonState1 = 1;
 int buttonState2 = 1;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 5;
+int mechanicID = 1;
 
 //empID currently assigned to notificator
 int EmpNo = 0;
@@ -219,7 +222,7 @@ void setup(){
 	
 	buzzerFunction(3);
 	
-	delay(500);
+	delay(10);
 	Serial.begin(9600);
 	Serial.println();
 	
@@ -230,7 +233,7 @@ void setup(){
 	
 	int ResetCounter = 0;
 	while (WiFi.status() != WL_CONNECTED) {
-		delay(800);
+		delay(300);
 		Serial.print(".");
 		Serial.print(ResetCounter);
 		ResetCounter++;
@@ -247,7 +250,7 @@ void setup(){
 			display.setTextAlignment(TEXT_ALIGN_CENTER);
 			display.drawString(64, 22, "ESP8266 reset!");
 			display.display();
-			delayer(2);
+			delayer(1);
 			ESP.restart();
 		  }
 	}
@@ -264,6 +267,8 @@ void setup(){
 
 	pinMode(startButton, INPUT_PULLUP);
 	pinMode(cancelButton, INPUT_PULLUP);
+	
+	pinMode(LedLight, OUTPUT);
 
 	attachInterrupt(startButton, startButtonChange, CHANGE);
 	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
@@ -329,9 +334,6 @@ void setup(){
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
 	display.drawString(64, 22, "SQL connected!\n");
 	display.display();
-
-	strip.begin();
-	strip.show(); // Initialize all pixels to 'off'
 
 }
 
@@ -480,12 +482,12 @@ do {
 conn.close();
 
 
-// deep sleep for 15mins if no task
+// deep sleep for 10mins if no task
 if (cellLocation == 0) {
 	displayClear();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
-    display.drawString(64, 22, "No task,\n sleeping for 15mins");
-	Serial.println("No task,\n sleeping for 15mins");
+    display.drawString(64, 22, "No task,\n sleeping for 10mins");
+	Serial.println("No task,\n sleeping for 10mins");
 	display.display();
 	buzzerFunction(1);
 	delayer(5);
@@ -493,7 +495,7 @@ if (cellLocation == 0) {
 	delay(100);
 	yield();
 	OffNeoPixel();
-	ESP.deepSleep(60000000*15);
+	ESP.deepSleep(40000000*15);
 	//sleep esp8266 for 15mins
 	ESP.restart();
 }
@@ -525,10 +527,9 @@ display.print("\n");
 display.print("START           END");
 */
 
-//set neopixel to red
-strip.setPixelColor(0, 255, 0, 0);
-strip.setBrightness(64);
-strip.show();
+//set LED to ON
+digitalWrite(LedLight, HIGH);   // turn the LED on (HIGH is the voltage level)
+delay(10);
 
 displayClear();
 display.setTextAlignment(TEXT_ALIGN_LEFT);
@@ -956,17 +957,16 @@ void CancelTask() {
 }
 
 void OffNeoPixel () {
-	//set neopixel to red
-		strip.setPixelColor(0, 0, 0, 0);
-		strip.show();
+	//set LED to off
+		digitalWrite(LedLight, LOW);    // turn the LED off by making the voltage LOW
+		delay(10);   
 }
 
 int BlinkNeoPixel () {
 	if (BlinkState == 0) {
 		//set neopixel to red
-		strip.setPixelColor(0, 255, 0, 0);
-		strip.setBrightness(64);
-		strip.show();
+		digitalWrite(LedLight, HIGH);   // turn the LED on (HIGH is the voltage level)
+		delay(10); 
 		BlinkState = 1;
 	}
 		else if (BlinkState == 1) {
