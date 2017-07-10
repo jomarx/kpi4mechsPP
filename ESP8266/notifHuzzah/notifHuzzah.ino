@@ -496,7 +496,7 @@ if (cellLocation == 0) {
 	yield();
 	OffNeoPixel();
 	ESP.deepSleep(40000000*15);
-	//sleep esp8266 for 15mins
+	//sleep esp8266 for 10mins
 	ESP.restart();
 }
   
