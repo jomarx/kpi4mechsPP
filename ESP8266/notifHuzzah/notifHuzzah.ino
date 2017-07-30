@@ -122,7 +122,7 @@ char password[] = "secret"; // MySQL user login password
 
 // Sample query
 //char query[] = "SELECT population FROM world.city WHERE name = 'New York'";
-char QUERY_POP[] = "SELECT ID, location, EmpNo FROM kpi_mech.task_db WHERE NotifNo = %lu AND (Status = 2 OR Status = 1) ORDER BY Severity ASC limit 1;";
+char QUERY_POP[] = "SELECT ID, location, Assignee, Status FROM kpi_mech.task_db WHERE NotifNo = %lu AND (Status = 2 OR Status = 1) ORDER BY Severity ASC limit 1;";
 char QUERY_UPDATE_2[] = "UPDATE kpi_mech.task_db SET Status = 2 WHERE ID = %lu; ";
 char QUERY_UPDATE_3[] = "UPDATE kpi_mech.task_db SET Status = 3 WHERE ID = %lu; ";
 char QUERY_UPDATE_5[] = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = %lu; ";
@@ -215,6 +215,8 @@ int ElapsedTime = 0;
 int BlinkState = 0;
 int countToSec = 0;
 
+//If from break or from new
+int Status = 0;
 
 void setup(){  
 
@@ -475,6 +477,9 @@ do {
 		EmpNo = atol(row->values[2]);
 		Serial.print("value of EmpNo = ");
 		Serial.println(EmpNo);
+		Status = atol(row->values[3]);
+		Serial.print("value of Status = ");
+		Serial.println(Status);
 		}
 	} while (row != NULL);
 // Deleting the cursor also frees up memory used
@@ -484,17 +489,16 @@ conn.close();
 
 // deep sleep for 10mins if no task
 if (cellLocation == 0) {
+	OffNeoPixel();
 	displayClear();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
     display.drawString(64, 22, "No task,\n sleeping for 10mins");
 	Serial.println("No task,\n sleeping for 10mins");
 	display.display();
 	buzzerFunction(1);
-	delayer(5);
+	delayer(2);
 	displayClear();
-	delay(100);
 	yield();
-	OffNeoPixel();
 	ESP.deepSleep(40000000*15);
 	//sleep esp8266 for 10mins
 	ESP.restart();
@@ -572,13 +576,17 @@ while (TNLeaveLoop < 1) {
 		Serial.println("SQL query to start task");
 		// Initiate the query class instance
 		MySQL_Cursor *cur_mem1 = new MySQL_Cursor(&conn);
-		sprintf(query, QUERY_STARTTIME, taskID);
-		// Execute the query
-		delay(500);
-		Serial.println("sql to upload start time");
-		cur_mem1->execute(query);
-		// SQL end
-		Serial.println("done upload");
+		
+		if (Status != 2){
+			sprintf(query, QUERY_STARTTIME, taskID);
+			// Execute the query
+			delay(500);
+			Serial.println("sql to upload start time");
+			cur_mem1->execute(query);
+			// SQL end
+			Serial.println("done upload");
+		}
+		
 		delay(500);
 		sprintf(query, QUERY_UPDATE_2, taskID);
 		// Execute the query
