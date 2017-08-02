@@ -143,8 +143,8 @@ MySQL_Connection conn((Client *)&client);
 
 
 //wifi
-char ssid[] = "outsourcing1.25s"; // your SSID
-char pass[] = "dbafe12345!!"; // your SSID Password
+char ssid[] = "kpi4mech"; // your SSID
+char pass[] = "kpi4mech1"; // your SSID Password
 //char ssid[] = "outsourcing1.25"; // your SSID
 //char pass[] = "dbafe54321!"; // your SSID Password
 //char ssid[] = "jomarAP-SP";  //  your network SSID (name)
@@ -203,7 +203,7 @@ int buttonState2 = 1;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 1;
+int mechanicID = 4;
 
 //empID currently assigned to notificator
 int EmpNo = 0;
@@ -489,17 +489,17 @@ conn.close();
 
 // deep sleep for 10mins if no task
 if (cellLocation == 0) {
-	OffNeoPixel();
+	OnNeoPixel();
 	displayClear();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
-    display.drawString(64, 22, "No task,\n sleeping for 10mins");
-	Serial.println("No task,\n sleeping for 10mins");
+    display.drawString(64, 22, "No task,\n sleeping for 1min");
+	Serial.println("No task,\n sleeping for 1min");
 	display.display();
 	buzzerFunction(1);
 	delayer(2);
 	displayClear();
 	yield();
-	ESP.deepSleep(40000000*15);
+	ESP.deepSleep(4000000*15);
 	//sleep esp8266 for 10mins
 	ESP.restart();
 }
@@ -557,7 +557,7 @@ while (TNLeaveLoop < 1) {
 		
 	if (buttonState1 == LOW && buttonState2 == HIGH){
 		
-		OffNeoPixel ();
+		OnNeoPixel();
 		
 		displayClear();
 		display.drawStringMaxWidth(0, 0, 128, String(nh) + ":" + String(nm) + ":" + String(ns) +" | " + String(nmo) + "/" + String(ndy) + "/" + String(nyr));
@@ -716,7 +716,7 @@ while (TNLeaveLoop < 1) {
 		// SQL end
 		buzzerFunction(2);
 		
-		OffNeoPixel();
+		OnNeoPixel();
 		
 		ESP.restart();
 		conn.close();
@@ -796,7 +796,7 @@ while (TNLeaveLoop < 1) {
 		taskID = 0;
 		delay(200);
 		displayClear();
-		OffNeoPixel ();
+		OnNeoPixel();
 	}
 
 	
@@ -825,8 +825,7 @@ buttonState2 = 1;
   //sleep for 1min
   //ESP.deepSleep(60000000);
   //delayer(60);
-	//OffNeoPixel ();
-  	//ESP.restart();
+	//ESP.restart();
   
 }
 
@@ -959,14 +958,20 @@ void CancelTask() {
 		taskID = 0;
 		delay(200);
 		displayClear();*/
-		OffNeoPixel ();
+		OnNeoPixel();
 		ESP.restart();
 	}
 }
 
-void OffNeoPixel () {
+void OffNeoPixel() {
 	//set LED to off
 		digitalWrite(LedLight, LOW);    // turn the LED off by making the voltage LOW
+		delay(10);   
+}
+
+void OnNeoPixel () {
+	//set LED to ON
+		digitalWrite(LedLight, HIGH);    // turn the LED ON by making the voltage HIGH
 		delay(10);   
 }
 
@@ -979,7 +984,7 @@ int BlinkNeoPixel () {
 	}
 		else if (BlinkState == 1) {
 		//set neopixel to 0
-		OffNeoPixel ();
+		OffNeoPixel();
 		BlinkState = 0;
 	}
 	
