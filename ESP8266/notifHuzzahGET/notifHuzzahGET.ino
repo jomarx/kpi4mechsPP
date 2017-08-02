@@ -16,7 +16,7 @@
 #include <ESP8266WiFi.h>
 #include "config.h"
 
-char serverAddress[] = "192.168.93.180";  // server address
+char serverAddress[] = "192.168.143.185";  // server address
 int port = 80;
 
 WiFiClient wifi;
@@ -31,17 +31,11 @@ int mechanicID = 1;
 
 
 void setup() {
-  Serial.begin(9600);
-  // Connect to WPA/WPA2 network:
-  WiFi.begin(ssid, pass);
-  Serial.print("Attempting to connect to Network named: ");
-  while ( WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    Serial.println(ssid);  	// print the network name (SSID);
-	delay(300);
-	Serial.print(status);
-    
-  }
+	//watchdog timer
+	ESP.wdtDisable();
+	
+	Serial.begin(9600);
+	wifiConnect();
 
   // print the SSID of the network you're attached to:
   Serial.print("SSID: ");
@@ -51,58 +45,115 @@ void setup() {
   IPAddress ip = WiFi.localIP();
   Serial.print("IP Address: ");
   Serial.println(ip);
+  ESP.wdtFeed();
 }
 
 void loop() {
-  Serial.println("making POST request");
-  String contentType = "application/x-www-form-urlencoded";
-  String postData = "NotifNo=1&typer=1";
+	ESP.wdtFeed();
+	statusCode = 0;
+	response = "";
+	Serial.println("making POST request");
+	String contentType = "application/x-www-form-urlencoded";
+	String postData = "NotifNo=";
+	postData += mechanicID;
+	postData += "&typer=1";
 
-  client.post("/android2/querytask.php", contentType, postData);
+	Serial.print("postData: ");
+	Serial.println(postData);
 
-  // read the status code and body of the response
-  statusCode = client.responseStatusCode();
-  response = client.responseBody();
-
-  Serial.print("Status code: ");
-  Serial.println(statusCode);
-  Serial.print("Response: ");
-  Serial.println(response);
+	Serial.println();
+	Serial.println("Start loop :");
+	
+	ESP.wdtFeed();
+	
+	while ( statusCode != 200) {
+		ESP.wdtFeed();
+		Serial.print(".");
+		client.post("/android2/querytask.php", contentType, postData);
+		// read the status code and body of the response
+		statusCode = client.responseStatusCode();
+		response = client.responseBody();
+		Serial.print("Status code: ");
+		Serial.println(statusCode);
+		Serial.print("Response: ");
+		Serial.println(response);
+		delay(100);
+		client.stop();
+	}
   
-  int firstCommaIndex = response.indexOf(',');
-  int secondCommaIndex = response.indexOf(',', firstCommaIndex+1);
-  String ID = response.substring(0, firstCommaIndex);
-  String location = response.substring(firstCommaIndex+1, secondCommaIndex);
-  String Status = response.substring(secondCommaIndex+1);
+  if (response != "") {
+	  ESP.wdtFeed();
+	  Serial.println();
+	  Serial.println("not empty!");
+	  Serial.println("Update 1 successful! ");
+  
+	  int firstCommaIndex = response.indexOf(',');
+	  int secondCommaIndex = response.indexOf(',', firstCommaIndex+1);
+	  String ID = response.substring(0, firstCommaIndex);
+	  String location = response.substring(firstCommaIndex+1, secondCommaIndex);
+	  String Status = response.substring(secondCommaIndex+1);
 
-  Serial.print("ID: ");
-  Serial.println(ID);
-  Serial.print("location: ");
-  Serial.println(location);
-  Serial.print("Status: ");
-  Serial.println(Status);
+	  Serial.print("ID: ");
+	  Serial.println(ID);
+	  Serial.print("location: ");
+	  Serial.println(location);
+	  Serial.print("Status: ");
+	  Serial.println(Status);
+	  Serial.println();
+	  ESP.wdtFeed();
+  } else {
+	  ESP.wdtFeed();
+	  Serial.println("empty!");
+	  Serial.println();
   
-  Serial.println("Wait five seconds");
-  delay(5000);
-  
+	Serial.println("Wait five seconds (from no response)");
+	ESP.wdtFeed();
+	delay(3000);
+  /*
   Serial.println("Posting and updating data");
   
-  postData = "NotifNo=1&typer=2&taskID=";
+  postData = "NotifNo=";
+  postData += mechanicID;
+  postData += "&typer=2&taskID=";
+  //postData = "NotifNo=1&typer=2&taskID=";
   postData += ID;
   
   Serial.print("postData: ");
   Serial.println(postData);
+  
+  while ( statusCode != 200) {
+	client.post("/android2/querytask.php", contentType, postData);
+	// read the status code and body of the response
+	statusCode = client.responseStatusCode();
+	response = client.responseBody();
+	Serial.print("Status code: ");
+	Serial.println(statusCode);
+	Serial.print("Response: ");
+	Serial.println(response);
+	delay(100);
+  }
+  Serial.println("Update 2 successful! ");
+  Serial.println();*/
+  }
+  
+	Serial.println("Wait five seconds");
+	delay(5000);
+	ESP.wdtFeed();
+}
 
-  client.post("/android2/querytask.php", contentType, postData);
-
-  // read the status code and body of the response
-  statusCode = client.responseStatusCode();
-  response = client.responseBody();
-  
-  Serial.print("Status code: ");
-  Serial.println(statusCode);
-  Serial.print("Response: ");
-  Serial.println(response);
-  
-  
+void wifiConnect () {
+	// Connect to WPA/WPA2 network:
+	WiFi.begin(ssid, pass);
+	int ResetCounter = 0;
+	Serial.print("Attempting to connect to Network ");
+	while ( WiFi.status() != WL_CONNECTED) {
+		ESP.wdtFeed();
+		Serial.print(".");
+		ResetCounter++;
+		yield();
+		delay(300);
+		if (ResetCounter >= 30) {
+			ESP.restart();
+		}
+	}
 }
