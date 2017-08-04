@@ -130,6 +130,7 @@ char QUERY_UPDATE_6[] = "UPDATE kpi_mech.task_db SET Status = 6 WHERE ID = %lu; 
 char QUERY_STARTTIME[] = "UPDATE kpi_mech.task_db SET StartTime = (Curtime()) WHERE ID = %lu; ";
 char QUERY_ENDTIME[] = "UPDATE kpi_mech.task_db SET EndTime = (Curtime()), EndDate = (now()) WHERE ID = %lu; ";
 char QUERY_AVAILABLE[] = "UPDATE kpi_mech.mech_db SET status = 0 WHERE NotifNo = %d; UPDATE kpi_mech.mbreak_db SET EndDate = (now()) WHERE TaskID = %d;";
+char QUERY_AVAILABLE2[] = "UPDATE kpi_mech.mech_db SET status = 0 WHERE NotifNo = %d;";
 char QUERY_CANCELLED[] = "insert into kpi_mech.cancel_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime()); ";
 char QUERY_TIMEOUT[] = "insert into kpi_mech.timeout_db (taskID, mech, date, time) values (%d, %d, CURDATE(), Curtime()); ";
 char query[256];
@@ -203,7 +204,7 @@ int buttonState2 = 1;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 4;
+int mechanicID = 1;
 
 //empID currently assigned to notificator
 int EmpNo = 0;
@@ -784,7 +785,7 @@ while (TNLeaveLoop < 1) {
 		// Execute the query
 		cur_mem3->execute(query);
 		delay(500);
-		sprintf(query, QUERY_AVAILABLE, mechanicID);
+		sprintf(query, QUERY_AVAILABLE2, mechanicID);
 		Serial.println("sql to update mech availability");
 		cur_mem3->execute(query);
 		//delete cur_mem;
@@ -944,7 +945,7 @@ void CancelTask() {
 		// Execute the query
 		cur_mem3->execute(query);
 		delay(500);
-		sprintf(query, QUERY_AVAILABLE, mechanicID, taskID);
+		sprintf(query, QUERY_AVAILABLE2, mechanicID, taskID);
 		Serial.println("sql to update mech availability");
 		cur_mem3->execute(query);
 		// SQL end
