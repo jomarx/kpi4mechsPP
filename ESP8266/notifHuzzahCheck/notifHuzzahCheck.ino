@@ -1,5 +1,5 @@
 
-
+#include <ESP8266WiFi.h>
 #include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
 // Initialize the OLED display using brzo_i2c
 // D3 -> SDA
@@ -17,9 +17,47 @@ const int cancelButton = 13;
 const int LockButton = 14;
 
 int buttonState = 1;
+int tempWifiStr = 0;
+
+//wifi
+//char ssid[] = "kpi4mech"; // your SSID
+//char pass[] = "kpi4mech1"; // your SSID Password
+char ssid[] = "HanesSucat"; // your SSID
+char pass[] = "alabang1"; // your SSID Password
+
 
 void setup(void) {
 	Serial.begin(9600);
+	Serial.println();
+	
+	// We start by connecting to a WiFi network
+	Serial.print("Connecting to ");
+	Serial.println(ssid);
+	WiFi.begin(ssid, pass);
+	
+	int ResetCounter = 0;
+	while (WiFi.status() != WL_CONNECTED) {
+		delay(300);
+		Serial.print(".");
+		Serial.print(ResetCounter);
+		ResetCounter++;
+		yield();
+		if (ResetCounter >= 30) {
+			Serial.print("ESP8266 reset!");
+			
+			display.init();
+
+			display.flipScreenVertically();
+			display.setFont(ArialMT_Plain_16);
+			
+			displayClear();
+			display.setTextAlignment(TEXT_ALIGN_CENTER);
+			display.drawString(64, 22, "ESP8266 reset!");
+			display.display();
+			delayer(1);
+			ESP.restart();
+		  }
+	}
 	
 	// Initialising the UI will init the display too.
 	display.init();
@@ -35,24 +73,39 @@ void setup(void) {
 void loop(void) {
 	
 	buzzerFunction(1);
-	
+		
 	displayClear();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	
+	tempWifiStr = WifiStrength();
+	display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
+	
 	display.drawString(64, 22, "button test - Press Start");
-	display.print("\n");
+	display.print("\n"); 
 	display.display();
 
 	Serial.println("NotifHuzzah circuit tests");
 	Serial.println("button test - Press Start");
 	do {
+		displayClear();
 		buttonState = digitalRead(startButton);  
 		Serial.print(".");
+		
+		tempWifiStr = WifiStrength();
+		display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
+		display.drawString(64, 22, "button test - Press Start");
+		display.display();
 		yield();
-		delay(100);
+		delay(500);
+		
 	} while (buttonState == HIGH); 
 	
 	displayClear();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	
+	tempWifiStr = WifiStrength();
+	display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
+	
 	display.drawString(64, 22, "button test - Press Cancel");
 	display.print("\n");
 	display.display();
@@ -71,6 +124,11 @@ void loop(void) {
 	
 	displayClear();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	
+	tempWifiStr = WifiStrength();
+	display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
+	
+	
 	display.drawString(64, 22, "button test - Press LockButton");
 	display.print("\n");
 	display.display();
@@ -92,6 +150,11 @@ void loop(void) {
 
 displayClear();
 display.setTextAlignment(TEXT_ALIGN_CENTER);
+
+tempWifiStr = WifiStrength();
+display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
+	
+
 display.drawString(64, 22, "Screen OK!");
 display.print("\n");
 display.display();
@@ -101,6 +164,11 @@ display.display();
  
  displayClear();
 display.setTextAlignment(TEXT_ALIGN_CENTER);
+
+tempWifiStr = WifiStrength();
+display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
+	
+
 display.drawString(64, 22, "Sleeping!");
 display.print("\n");
 display.display();
@@ -130,4 +198,36 @@ int buzzerFunction(int counter){
 int displayClear() {
 display.clear();
 display.display();
+}
+
+int delayer(int dly){
+	Serial.print("Delaying : ");
+	for (int DelayDaw = 0; DelayDaw <= dly; DelayDaw++){
+		delay(1000);
+		Serial.print(DelayDaw);
+		Serial.print(".");
+	}
+}
+
+int WifiStrength () {
+	long RSSI = WiFi.RSSI();
+	Serial.print("RSSI: ");
+	Serial.println(RSSI);
+	
+	int bars = 0;
+	
+	if (RSSI > -55) {
+		bars = 100;
+	} else if (RSSI < -55 & RSSI > -65) {
+		bars = 75;
+	} else if (RSSI < -65 & RSSI > -70) {
+		bars = 50;
+	} else if (RSSI < -70 & RSSI > -78) {
+		bars = 25;
+	} else if (RSSI < -78 & RSSI > -82) {
+		bars = 10;
+	} else {
+		bars = 0;
+	}
+	return bars;
 }
