@@ -16,7 +16,8 @@
 #include <ESP8266WiFi.h>
 #include "config.h"
 
-char serverAddress[] = "192.168.143.185";  // server address
+//char serverAddress[] = "192.168.143.185";  // server address
+char serverAddress[] = "10.37.10.149";  // server address
 int port = 80;
 
 WiFiClient wifi;
@@ -32,7 +33,7 @@ int mechanicID = 1;
 
 void setup() {
 	//watchdog timer
-	ESP.wdtDisable();
+	//ESP.wdtDisable();
 	
 	Serial.begin(9600);
 	wifiConnect();
@@ -69,7 +70,8 @@ void loop() {
 	while ( statusCode != 200) {
 		ESP.wdtFeed();
 		Serial.print(".");
-		client.post("/android2/querytask.php", contentType, postData);
+		//client.post("/android2/querytask.php", contentType, postData);
+		client.post("/querytask.php", contentType, postData);
 		// read the status code and body of the response
 		statusCode = client.responseStatusCode();
 		response = client.responseBody();
@@ -101,10 +103,12 @@ void loop() {
 	  Serial.println(Status);
 	  Serial.println();
 	  ESP.wdtFeed();
+	  client.stop();
   } else {
 	  ESP.wdtFeed();
 	  Serial.println("empty!");
 	  Serial.println();
+	  client.stop();
   
 	Serial.println("Wait five seconds (from no response)");
 	ESP.wdtFeed();
