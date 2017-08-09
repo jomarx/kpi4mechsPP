@@ -6,7 +6,7 @@ $sec = "600";
 ?>
 <html>
     <head>
-    <meta http-equiv="refresh" content="URL='<?php echo $page?>'">
+    <meta http-equiv="refresh" content="<?php echo $sec?>;URL='<?php echo $page?>'">
     </head>
 	<style>
 	td {
@@ -26,7 +26,7 @@ $sec = "600";
 echo "<center>";
 echo "<span style='font-size: 25pt'>";
 //echo date("m/d/Y H:i:s");
-//echo "<BR><b>Task Database</b><BR><BR>";
+//echo "<BR><b>Task Database (for reports)</b><BR><BR>";
 echo "</span>";
 
 
@@ -46,7 +46,7 @@ try {
 	//Start connection
 	
 //	$sql = "SELECT * from mbreak_db";
-		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,mech_db.dayOrNight,mbcode_db.details,task_db.StartDate,task_db.EndDate, task_db.comments from mech_db INNER JOIN task_db ON task_db.Assignee=mech_db.empID INNER JOIN mbcode_db ON mbcode_db.id=task_db.details ORDER BY `ID` DESC";
+		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,mech_db.dayOrNight,mbcode_db.details,task_db.StartTime,task_db.EndTime,task_db.StartDate,task_db.BreakStartTime,task_db.EndDate, task_db.comments, task_db.machineType, task_db.AssignedTime from mech_db INNER JOIN task_db ON task_db.Assignee=mech_db.empID INNER JOIN mbcode_db ON mbcode_db.id=task_db.details WHERE task_db.Status <> 7 ORDER BY `ID` DESC";
 
 	$result = $conn->query($sql);
     		
@@ -55,7 +55,7 @@ try {
 		echo "<span style='font-size: 15pt'>";
 		echo "<table style='border:4px solid black; width: 100%'>";
 		//echo "<font size='30'>";
-		echo "<tr><th>TaskID</th><th>location</th><th>FirstName</th><th>LastName</th><th>ShortName</th><th>DayOrNight</th><th>Details</th><th>StartDate</th><th>EndDate</th><th>Comments</th><th>Duration</th></tr>";
+		echo "<tr><th>TaskID</th><th>DateTime</th><th>location</th><th>FirstName</th><th>LastName</th><th>ShortName</th><th>DayOrNight</th><th>Details</th><th>MachineType</th><th>BreakStart</th><th>AssignedTime</th><th>StartDate</th><th>EndDate</th><th>Comments</th><th>Duration (m)</th><th>ResponseTime(m)</th></tr>";
 		echo "</span>";
 		
 		// <th>SpecialSerial</th><th>StartDate</th><th>EndDate</th><th>Details</th>
@@ -63,57 +63,42 @@ try {
 		while($row = $result->fetch_assoc())
 		{
 			
-			$to_time = strtotime($row["EndDate"]);
-			$from_time = strtotime($row["StartDate"]);
+			$to_time = strtotime($row["StartTime"]);
+			$from_time = strtotime($row["EndTime"]);
 			$duration = round(abs($to_time - $from_time) / 60,2);
 
+			$cur_time = strtotime($row["StartDate"]);
 			
 			echo "<tr>";
 			echo "<td>".$row["ID"]."</td>";
+			echo "<td>".date('m.d.y', $cur_time)."</td>";
 			echo "<td>".$row["location"]."</td>";
 			echo "<td>".$row["FirstName"]."</td>";
 			echo "<td>".$row["LastName"]."</td>";
 			echo "<td>".$row["ShortName"]."</td>";
 			echo "<td>".$row["dayOrNight"]."</td>";
 			echo "<td>".$row["details"]."</td>";
+			echo "<td>".$row["machineType"]."</td>";
 			
+			$to_time1 = strtotime($row["StartTime"]);
+			$from_time1 = strtotime($row["BreakStartTime"]);
+			$duration1 = round(abs($to_time1 - $from_time1) / 60,2);
 			
-			echo "<td>".$row["StartDate"]."</td>";
-			echo "<td>".$row["EndDate"]."</td>";
+			echo "<td>".$row["BreakStartTime"]."</td>";
+			echo "<td>".$row["AssignedTime"]."</td>";
+			echo "<td>".$row["StartTime"]."</td>";
+			echo "<td>".$row["EndTime"]."</td>";
 			echo "<td>".$row["comments"]."</td>";
-		if (($duration >=60)&&($duration <1440)){
-			$duration=$duration/60;
+
 		
 		if ($duration >1){
-		echo "<td>".$duration."Hours</td>";
+			echo "<td>".floor($duration)."</td>";
+			echo "<td>".floor($duration1)."</td>";	
+		} else {
+			echo "<td>".floor($duration)."</td>";
+			echo "<td>".floor($duration1)."</td>";	
 		}
-		else{
-		echo "<td>".$duration."Hour</td>";
-			
-		}
-		}
-		else if ($duration >= 1440) {
-			$duration=$duration/1440;
-			$dur =floor($duration);
-		if ($dur<1){
-		echo "<td>".$dur." Days</td>";
-		}
-		else{
-		echo "<td>".$dur." Day</td>";
-			
-		}
-			
-		}
-		else{
-		if ($duration >1){
-		echo "<td>".floor($duration)." Minutes</td>";
 		
-		}
-		else{
-		echo "<td>".floor($duration)." Minute</td>";
-			
-		}
-		}
 			
 		
 			echo "</tr>";
@@ -122,7 +107,7 @@ try {
 	
 		echo "</table>";
 		echo "</center>";
-		echo "<BR><b>Task Database</b><BR><BR>";
+		echo "<BR><b>Task Database (for reports) </b><BR><BR>";
 	}
 	else {
     		echo "No results";

@@ -25,8 +25,9 @@ $sec = "10";
 <?php
 echo "<center>";
 echo "<span style='font-size: 25pt'>";
+echo "<span style='font-size: 25pt'>";
 //echo date("m/d/Y H:i:s");
-//echo "<BR><b>Timeout Tasks</b><BR><BR>";
+//echo "<BR><b>Cancelled Tasks</b><BR><BR>";
 echo "</span>";
 
 
@@ -46,7 +47,7 @@ try {
 	//Start connection
 	
 //	$sql = "SELECT * from mbreak_db";
-		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,timeout_db.recorded,timeout_db.taskID,task_db.ID,task_db.details,mbcode_db.details as det from timeout_db INNER JOIN mech_db ON mech_db.empID=timeout_db.mech INNER JOIN task_db ON task_db.ID=timeout_db.taskID INNER JOIN mbcode_db ON task_db.details=mbcode_db.id ORDER by task_db.ID DESC";
+		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,cancel_db.recorded,cancel_db.taskID,task_db.ID,task_db.details,mbcode_db.details as det from cancel_db INNER JOIN mech_db ON mech_db.empID=cancel_db.mech INNER JOIN task_db ON task_db.ID=cancel_db.taskID INNER JOIN mbcode_db ON task_db.details=mbcode_db.id ORDER by task_db.ID DESC";
 
 	$result = $conn->query($sql);
     		
@@ -79,7 +80,7 @@ echo "</tr>";
 	
 		echo "</table>";
 		echo "</center>";
-		echo "<BR><b>Timeout Tasks</b><BR><BR>";
+		echo "<BR><b>Cancelled Tasks</b><BR><BR>";
 	
 	}
 	

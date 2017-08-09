@@ -26,7 +26,7 @@ $sec = "10";
 echo "<center>";
 echo "<span style='font-size: 25pt'>";
 //echo date("m/d/Y H:i:s");
-//echo "<BR><b>Timeout Tasks</b><BR><BR>";
+//echo "<BR><b>Mechanic Status</b><BR><BR>";
 echo "</span>";
 
 
@@ -46,7 +46,7 @@ try {
 	//Start connection
 	
 //	$sql = "SELECT * from mbreak_db";
-		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,timeout_db.recorded,timeout_db.taskID,task_db.ID,task_db.details,mbcode_db.details as det from timeout_db INNER JOIN mech_db ON mech_db.empID=timeout_db.mech INNER JOIN task_db ON task_db.ID=timeout_db.taskID INNER JOIN mbcode_db ON task_db.details=mbcode_db.id ORDER by task_db.ID DESC";
+		$sql = "SELECT empID, ShortName, NotifNo, dayOrNight, status FROM `mech_db` WHERE att_stat = '1' AND mechanicID = '1'";
 
 	$result = $conn->query($sql);
     		
@@ -55,37 +55,45 @@ try {
 		echo "<span style='font-size: 15pt'>";
 		echo "<table style='border:4px solid black; width: 100%'>";
 		//echo "<font size='30'>";
-		echo "<tr><th>TaskID</th><th>location</th><th>FirstName</th><th>LastName</th><th>ShortName</th><th>Task Details</th><th>Recorded</th></tr>";
+		echo "<tr><th>empID</th><th>ShortName</th><th>NotifNo</th><th>dayOrNight</th><th>status</th></tr>";
 		echo "</span>";
 		
 		// <th>SpecialSerial</th><th>StartDate</th><th>EndDate</th><th>Details</th>
 		// output data of each row
-		while($row = $result->fetch_assoc())
-		{
+		while($row = $result->fetch_assoc()) {
 			
-			
+			//$to_time = $row["status"];
+			if ($row["status"] == "2") {
+				$empStatus = "On Break";
+			} else if ($row["status"] == "1") {
+				$empStatus = "Busy";
+			} else if ($row["status"] == "0") {
+				$empStatus = "Available";
+			} else {
+				$empStatus = "Unknown";
+			}
+						
 			echo "<tr>";
-			echo "<td>".$row["ID"]."</td>";
-			echo "<td>".$row["location"]."</td>";
-			echo "<td>".$row["FirstName"]."</td>";
-			echo "<td>".$row["LastName"]."</td>";
-
+			echo "<td>".$row["empID"]."</td>";
 			echo "<td>".$row["ShortName"]."</td>";
-			echo "<td>".$row["det"]."</td>";
-			echo "<td>".$row["recorded"]."</td>";
-
-}
-echo "</tr>";
+			echo "<td>".$row["NotifNo"]."</td>";
+			echo "<td>".$row["dayOrNight"]."</td>";
+			echo "<td>".$empStatus."</td>";
+	
+			echo "</tr>";
+    		
+	}
 	
 		echo "</table>";
 		echo "</center>";
-		echo "<BR><b>Timeout Tasks</b><BR><BR>";
-	
-	}
-	
+		echo "<BR><b>Mechanic Status</b><BR><BR>";
+} else {
+    		echo "No results";
+}
 	
 	
 }
+
 catch(PDOException $e) {
      echo "Error: " . $e->getMessage();
 }

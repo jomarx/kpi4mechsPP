@@ -26,13 +26,14 @@ $sec = "10";
 <?php
 echo "<center>";
 echo "<span style='font-size: 25pt'>";
-echo date("m/d/Y H:i:s");
+//echo date("m/d/Y H:i:s");
+echo "<BR><b>Machine Breakdown</b><BR><BR>";
 echo "</span>";
 
 
-$servername = "192.168.143.200";
-$username = "nodemcu1";
-$password = "secret";
+$servername = "192.168.143.220";
+$username = "jomar";
+$password = "magic44ever";
 $dbname = "kpi_mech";
 
 try {
