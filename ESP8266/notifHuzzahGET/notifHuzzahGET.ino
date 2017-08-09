@@ -15,9 +15,20 @@
 #include <ArduinoHttpClient.h>
 #include <ESP8266WiFi.h>
 #include "config.h"
+#include <Wire.h>
 
-//char serverAddress[] = "192.168.143.185";  // server address
-char serverAddress[] = "10.37.10.149";  // server address
+#include "SSD1306.h" 
+// alias for `#include "SSD1306Wire.h"`
+// Initialize the OLED display using brzo_i2c
+// D3 -> SDA
+// D5 -> SCL
+SSD1306 display(0x3c, 4, 5);
+// or
+// SH1106Brzo  display(0x3c, D3, D5);
+
+
+char serverAddress[] = "192.168.143.220";  // server address
+//char serverAddress[] = "10.37.10.149";  // server address
 int port = 80;
 
 WiFiClient wifi;
@@ -28,42 +39,132 @@ int statusCode = 0;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 1;
+int mechanicID = 2;
 
+//buzzer
+const int buzzer = 2;
+const int buzzer2 = 15;
+
+//button
+const int startButton = 12;
+const int cancelButton = 13;
+const int LockButton = 14;
+
+const int LedLight = 0;
+
+int buttonState1 = 1;
+int buttonState2 = 1;
+
+//ElapsedTime = time elpsed since start
+int ElapsedTime = 0;
+
+//neopixel stuffs
+int BlinkState = 0;
+int countToSec = 0;
+
+String contentType = "application/x-www-form-urlencoded";
+String taskID = "";
+String cellLocation = "";
+String Status = "";
+String EmpNo = "";
+
+//wifi strength
+int tempWifiStr = 0;
 
 void setup() {
+	
 	//watchdog timer
 	//ESP.wdtDisable();
-	
+
+	WiFi.mode(WIFI_STA);
+
+	buzzerFunction(3);
+
 	Serial.begin(9600);
 	wifiConnect();
 
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
+	// print the SSID of the network you're attached to:
+	Serial.print("SSID: ");
+	Serial.println(WiFi.SSID());
 
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-  ESP.wdtFeed();
+	// print your WiFi shield's IP address:
+	IPAddress ip = WiFi.localIP();
+	Serial.print("IP Address: ");
+	Serial.println(ip);
+	ESP.wdtFeed();
+
+	String wfms = WiFi.macAddress();
+	Serial.print("MAC address : ");
+	Serial.println(wfms);
+	
+	// Initialising the UI will init the display too.
+	display.init();
+
+	display.flipScreenVertically();
+	display.setFont(ArialMT_Plain_16);
+
+	pinMode(startButton, INPUT_PULLUP);
+	pinMode(cancelButton, INPUT_PULLUP);
+	
+	pinMode(LedLight, OUTPUT);
+
+	attachInterrupt(startButton, startButtonChange, CHANGE);
+	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
+	
+	displayClear();
+
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 22, "Mechanic ID :\n" + String(mechanicID));
+	display.display();
+	
+	Serial.println("WiFi connected");
+	Serial.println("IP address: ");
+	Serial.println(WiFi.localIP());
+	yield();
+	delayer(3);
+
+	displayClear();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 22, "WIFI: Connected" );
+	display.print("\n");
+	display.display();
+	yield();
+
 }
 
 void loop() {
+	
+	Serial.println();
+	Serial.println("Start Main loop");	
+	
+	//reset button values	
+	buttonState1 = 1;
+	buttonState2 = 1;
+	
+	delayer(2);
+	displayClear();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 22, "Getting Tasks\n");
+	display.display();
+	
+	//getting tasks
+	
 	ESP.wdtFeed();
+	int typer=1;
 	statusCode = 0;
 	response = "";
 	Serial.println("making POST request");
-	String contentType = "application/x-www-form-urlencoded";
+	//String contentType = "application/x-www-form-urlencoded";
 	String postData = "NotifNo=";
 	postData += mechanicID;
-	postData += "&typer=1";
+	postData += "&typer=";
+	postData += typer;
 
 	Serial.print("postData: ");
 	Serial.println(postData);
 
 	Serial.println();
-	Serial.println("Start loop :");
+	Serial.println("Start sending loop");
 	
 	ESP.wdtFeed();
 	
@@ -77,72 +178,372 @@ void loop() {
 		response = client.responseBody();
 		Serial.print("Status code: ");
 		Serial.println(statusCode);
+		//200 = data sent successfully
+		//-1 =
+		//Response is the data the PHP server sents back
 		Serial.print("Response: ");
 		Serial.println(response);
 		delay(100);
+		//disconnect client
 		client.stop();
 	}
+	//reset status code
+	statusCode = 0;
   
-  if (response != "") {
-	  ESP.wdtFeed();
-	  Serial.println();
-	  Serial.println("not empty!");
-	  Serial.println("Update 1 successful! ");
-  
-	  int firstCommaIndex = response.indexOf(',');
-	  int secondCommaIndex = response.indexOf(',', firstCommaIndex+1);
-	  String ID = response.substring(0, firstCommaIndex);
-	  String location = response.substring(firstCommaIndex+1, secondCommaIndex);
-	  String Status = response.substring(secondCommaIndex+1);
+  if ((response != "")&&(typer == 1)) {
+	  
+		ESP.wdtFeed();
+		Serial.println();
+		Serial.println("not empty, means task available!");
 
-	  Serial.print("ID: ");
-	  Serial.println(ID);
-	  Serial.print("location: ");
-	  Serial.println(location);
-	  Serial.print("Status: ");
-	  Serial.println(Status);
-	  Serial.println();
-	  ESP.wdtFeed();
-	  client.stop();
+		//crunch response to get data
+		int firstCommaIndex = response.indexOf(',');
+		int secondCommaIndex = response.indexOf(',', firstCommaIndex+1);
+		int thirdCommaIndex = response.indexOf(',', secondCommaIndex+1);
+		taskID = response.substring(0, firstCommaIndex);
+		cellLocation = response.substring(firstCommaIndex+1, secondCommaIndex);
+		Status = response.substring(secondCommaIndex+1, thirdCommaIndex);
+		EmpNo = response.substring(thirdCommaIndex+1);
+
+		Serial.print("ID: ");
+		Serial.println(taskID);
+		Serial.print("location: ");
+		Serial.println(cellLocation);
+		Serial.print("Status: ");
+		Serial.println(Status);
+		Serial.print("Assignee/EmpNo: ");
+		Serial.println(EmpNo);
+		Serial.println();
+		ESP.wdtFeed();
+		client.stop();
+
+		//task found starting
+	  
+		int TNLeaveLoop = 0;
+		int countToFifteen = 0;
+		long countToFifteenAgain = 0;
+		int countToMinute = 0;
+		int MinLeft = 15;
+		
+		//set LED to ON
+		digitalWrite(LedLight, HIGH);   // turn the LED on (HIGH is the voltage level)
+		delay(10);
+
+		displayClear();
+		display.setTextAlignment(TEXT_ALIGN_LEFT);
+		
+		//get WIFI strength data
+		tempWifiStr = WifiStrength();
+		display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+		
+		display.drawString(0, 15, "Sew Line # " + String(cellLocation));
+		display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
+		display.drawString(0, 45, "START         END");
+
+		display.display();
+		buzzerFunction(5);
+		
+		while (TNLeaveLoop < 1) {
+			yield();
+			//buttonState1 = digitalRead(startButton);
+			//buttonState2 = digitalRead(cancelButton);
+			
+			if (countToSec > 15) {
+				BlinkNeoPixel();
+				countToSec = 0;
+			}
+				
+			if (buttonState1 == LOW && buttonState2 == HIGH) {
+				
+				OnNeoPixel();
+				
+				displayClear();
+				tempWifiStr = WifiStrength();
+				display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+				display.drawString(0, 15, "Sew Line # " + String(cellLocation));
+				display.drawString(0, 30, "<Task Done>");
+				display.display();
+				//starting task on db
+				Serial.println("Starting task, update DB");
+				ElapsedTime=0;
+				Serial.print("start task!!");
+				Serial.println("PHP query to start task");
+				yield();
+				
+				if (Status.toInt() != 2){
+					Serial.println("update task normally");
+					typePhp(2);
+				} else {
+					Serial.println("update task Mech Status Only");
+					typePhp(6);
+				}
+				
+				buzzerFunction(2);
+				
+				Serial.print("starting loop to wait to finish task");
+				for (int tempTimer = 0;tempTimer <= 3;tempTimer++)  {
+					//buttonState1 = digitalRead(startButton);
+					delay(200);
+			
+					if (buttonState1 == HIGH && buttonState2 == LOW){
+						CancelTask();		
+					}
+			
+					if (buttonState1 == HIGH){
+						tempTimer = 0;
+					}
+					if (countToFifteenAgain > 4500){
+						buzzerFunction(2);
+						countToFifteenAgain = 0;
+					}
+			
+					if (countToMinute > 300){
+						buzzerFunction(1);
+						countToMinute = 0;
+						ElapsedTime=ElapsedTime+1;
+						
+						displayClear();
+						
+						//get WIFI strength data
+						tempWifiStr = WifiStrength();
+						display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+						display.drawString(0, 15, "Elapsed Time: " + String(ElapsedTime) + "mins");
+						display.drawString(0, 30, "Sew Line #: " + String(cellLocation));
+						display.drawString(0, 45, "<Task Done>");
+						display.display();
+					
+					}
+			
+					Serial.print("countToMinute : ");
+					Serial.print(countToMinute);
+					Serial.print("\n");
+					Serial.print("countToFifteenAgain : ");
+					Serial.print(countToFifteenAgain);
+					Serial.print("\n");
+					
+					countToFifteenAgain++;
+					countToMinute++;
+				}
+		
+				Serial.print("done task!!");
+				displayClear();
+						
+				display.setTextAlignment(TEXT_ALIGN_CENTER);
+				display.drawString(64, 8, "Task Done\n Requesting new task \n");
+				display.display();
+				
+				//query for end time
+				typePhp(3);
+				
+				buzzerFunction(2);
+				
+				OnNeoPixel();
+		
+				ESP.restart();
+				TNLeaveLoop = 2;
+				buttonState2 == HIGH;
+			}
+			if (buttonState1 == HIGH && buttonState2 == LOW){
+				CancelTask();		
+			}
+	
+			yield();
+			
+			//jomar
+			
+			if (countToMinute > 1200 && TNLeaveLoop < 1){
+				displayClear();
+
+				display.setTextAlignment(TEXT_ALIGN_LEFT);
+				//get WIFI strength data
+				tempWifiStr = WifiStrength();
+				display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+				display.drawString(0, 15, "Sew Line # " + String(cellLocation));
+				display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
+				display.drawString(0, 45, "START         END");
+				display.display();
+				MinLeft--;
+				countToMinute = 0;
+				//Serial.print("function to update DB, timeout");
+				buzzerFunction(5);
+			}
+			
+			if (countToFifteen > 18000 && TNLeaveLoop < 1){
+				Serial.println("function to update DB, 15mins have past, auto assign");
+		
+				displayClear();
+				display.setTextAlignment(TEXT_ALIGN_CENTER);
+				display.drawString(64, 22, "No ACK!\nTransferring");
+				display.display();
+		
+				//SQL start
+				typePhp(5);
+				
+				
+				buzzerFunction(4);
+				TNLeaveLoop = 2;	
+				cellLocation = "";
+				taskID = "";
+				delay(200);
+				displayClear();
+				OnNeoPixel();
+			}
+
+	
+			Serial.print("countToFifteen: ");
+			Serial.println(countToFifteen);
+			countToFifteen++;
+			countToMinute++;
+			countToSec++;
+			delay(50);
+			yield();
+		
+		}
+		
+		Serial.println("out of loop");
+		//displayClear();
+			
+		//reset button state
+		buttonState1 = 1;
+		buttonState2 = 1;
+
+	  /*
+	  Serial.println("Posting and updating data");
+	  
+	  postData = "NotifNo=";
+	  postData += mechanicID;
+	  postData += "&typer=2&taskID=";
+	  //postData = "NotifNo=1&typer=2&taskID=";
+	  postData += ID;
+	  
+	  Serial.print("postData: ");
+	  Serial.println(postData);
+	  
+	  while ( statusCode != 200) {
+		client.post("/android2/querytask.php", contentType, postData);
+		// read the status code and body of the response
+		statusCode = client.responseStatusCode();
+		response = client.responseBody();
+		Serial.print("Status code: ");
+		Serial.println(statusCode);
+		Serial.print("Response: ");
+		Serial.println(response);
+		delay(100);
+	  }
+	  Serial.println("Update 2 successful! ");
+	  Serial.println();*/
+	  
   } else {
-	  ESP.wdtFeed();
-	  Serial.println("empty!");
-	  Serial.println();
-	  client.stop();
-  
-	Serial.println("Wait five seconds (from no response)");
-	ESP.wdtFeed();
-	delay(3000);
-  /*
-  Serial.println("Posting and updating data");
-  
-  postData = "NotifNo=";
-  postData += mechanicID;
-  postData += "&typer=2&taskID=";
-  //postData = "NotifNo=1&typer=2&taskID=";
-  postData += ID;
-  
-  Serial.print("postData: ");
-  Serial.println(postData);
-  
-  while ( statusCode != 200) {
-	client.post("/android2/querytask.php", contentType, postData);
-	// read the status code and body of the response
-	statusCode = client.responseStatusCode();
-	response = client.responseBody();
-	Serial.print("Status code: ");
-	Serial.println(statusCode);
-	Serial.print("Response: ");
-	Serial.println(response);
-	delay(100);
-  }
-  Serial.println("Update 2 successful! ");
-  Serial.println();*/
+	  	OnNeoPixel();
+		displayClear();
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 22, "No task,\n sleeping for 1min");
+		Serial.println("No task,\n sleeping for 1min");
+		display.display();
+		buzzerFunction(1);
+		displayClear();
+		yield();
+		ESP.deepSleep(4000000*15);
+		//sleep esp8266 for 1mins
+		ESP.restart();
   }
   
 	Serial.println("Wait five seconds");
 	delay(5000);
 	ESP.wdtFeed();
+	
+}
+
+int typePhp (int typer){
+	
+	ESP.wdtFeed();
+	statusCode = 0;
+	response = "";
+	Serial.println("making POST request");
+	//String contentType = "application/x-www-form-urlencoded";
+	String postData = "NotifNo=";
+	postData += mechanicID;
+	postData += "&typer=";
+	postData += typer;
+	
+	if ((typer==2)||(typer==3)||(typer==4)||(typer==5)||(typer==6)) {
+		Serial.println("Posting and updating data");
+		postData += "&taskID=";
+		postData += taskID;
+	}
+	
+	if ((typer==5)||(typer==6)) {
+		Serial.println("For Cancel/Timeout data");
+		postData += "&EmpNo=";
+		postData += EmpNo;
+	}
+
+	Serial.print("postData: ");
+	Serial.println(postData);
+
+	Serial.println();
+	Serial.println("Start sending loop");
+	
+	ESP.wdtFeed();
+	
+	while ( statusCode != 200) {
+		ESP.wdtFeed();
+		Serial.print(".");
+		//client.post("/android2/querytask.php", contentType, postData);
+		client.post("/querytask.php", contentType, postData);
+		// read the status code and body of the response
+		statusCode = client.responseStatusCode();
+		response = client.responseBody();
+		Serial.print("Status code: ");
+		Serial.println(statusCode);
+		//200 = data sent successfully
+		//-1 =
+		//Response is the data the PHP server sents back
+		Serial.print("Response: ");
+		Serial.println(response);
+		delay(100);
+		//disconnect client
+		client.stop();
+	}
+	//reset status code
+	statusCode = 0;
+	
+
+    if ((typer==2)||(typer==3)||(typer==4)||(typer==5)||(typer==6)) {
+		Serial.print("Update ");
+		Serial.print(typer);
+		Serial.print(" successful! ");
+		Serial.println();
+	}
+  
+	if ((response != "")&&(typer == 1)) {
+	  
+		ESP.wdtFeed();
+		Serial.println();
+		Serial.println("not empty, means task available!");
+
+		//crunch response to get data
+		int firstCommaIndex = response.indexOf(',');
+		int secondCommaIndex = response.indexOf(',', firstCommaIndex+1);
+		String taskID = response.substring(0, firstCommaIndex);
+		String cellLocation = response.substring(firstCommaIndex+1, secondCommaIndex);
+		String Status = response.substring(secondCommaIndex+1);
+
+		Serial.print("ID: ");
+		Serial.println(taskID);
+		Serial.print("location: ");
+		Serial.println(cellLocation);
+		Serial.print("Status: ");
+		Serial.println(Status);
+		Serial.println();
+		ESP.wdtFeed();
+		client.stop();
+
+		  
+	Serial.println("Wait five seconds");
+	delay(5000);
+	ESP.wdtFeed();
+	}
 }
 
 void wifiConnect () {
@@ -157,7 +558,132 @@ void wifiConnect () {
 		yield();
 		delay(300);
 		if (ResetCounter >= 30) {
+			Serial.print("ESP8266 reset!");
+			
+			display.init();
+
+			display.flipScreenVertically();
+			display.setFont(ArialMT_Plain_16);
+			
+			displayClear();
+			display.setTextAlignment(TEXT_ALIGN_CENTER);
+			display.drawString(64, 22, "ESP8266 reset!");
+			display.display();
 			ESP.restart();
 		}
+	}
+}
+
+void OffNeoPixel() {
+	//set LED to off
+		digitalWrite(LedLight, LOW);    // turn the LED off by making the voltage LOW
+		delay(10);   
+}
+
+void OnNeoPixel () {
+	//set LED to ON
+		digitalWrite(LedLight, HIGH);    // turn the LED ON by making the voltage HIGH
+		delay(10);   
+}
+
+int BlinkNeoPixel () {
+	if (BlinkState == 0) {
+		//set neopixel to red
+		digitalWrite(LedLight, HIGH);   // turn the LED on (HIGH is the voltage level)
+		delay(10); 
+		BlinkState = 1;
+	}
+		else if (BlinkState == 1) {
+		//set neopixel to 0
+		OffNeoPixel();
+		BlinkState = 0;
+	}
+	
+}
+
+void startButtonChange() {
+	
+	buttonState1 = 0;
+	
+}
+
+void cancelButtonChange() {
+	
+	buttonState2 = 0;
+	
+}
+
+int displayClear() {
+display.clear();
+display.setTextAlignment(TEXT_ALIGN_LEFT);
+display.display();
+}
+
+int buzzerFunction(int counter){
+	for (int buzzerTimer = 1; buzzerTimer <= counter; buzzerTimer++){
+		tone(buzzer, 4000); // Send 5KHz sound signal...
+		delay(50);        // ...for .1 sec
+		noTone(buzzer);     // Stop sound...
+		delay(50); 
+		tone(buzzer2, 4000); // Send 5KHz sound signal...
+		delay(50);        // ...for .1 sec
+		noTone(buzzer2);     // Stop sound...
+		delay(50); 
+	}
+}
+
+int delayer(int dly){
+	Serial.print("Delaying : ");
+	for (int DelayDaw = 0; DelayDaw <= dly; DelayDaw++){
+		delay(1000);
+		Serial.print(DelayDaw);
+		Serial.print(".");
+	}
+}
+
+int WifiStrength () {
+	long RSSI = WiFi.RSSI();
+	Serial.print("RSSI: ");
+	Serial.println(RSSI);
+	
+	int bars = 0;
+	
+	if (RSSI > -55) {
+		bars = 100;
+	} else if (RSSI < -55 & RSSI > -65) {
+		bars = 75;
+	} else if (RSSI < -65 & RSSI > -70) {
+		bars = 50;
+	} else if (RSSI < -70 & RSSI > -78) {
+		bars = 25;
+	} else if (RSSI < -78 & RSSI > -82) {
+		bars = 10;
+	} else {
+		bars = 0;
+	}
+	return bars;
+}
+
+void CancelTask() {
+	
+	yield();
+	Serial.println("Checking if I can cancel task");
+	
+	if (cellLocation != "") {
+		displayClear();
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 18, "Task cancelled!\nReassigning");
+		display.display();
+		
+		typePhp(5);
+		
+		delay(100);
+		Serial.println("PHP query to cancel task");
+			
+		Serial.print("cancel!! \n");
+		Serial.print("task should auto assign. \n");
+		buzzerFunction(4);
+		OnNeoPixel();
+		ESP.restart();
 	}
 }
