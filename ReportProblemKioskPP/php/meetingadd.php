@@ -7,7 +7,7 @@ include("config.php");
 $name=$_POST["name"];
 
 session_start();
-$sql1 = "INSERT into meeting_db(meetingid,meetingname) VALUES ('','$name')";
+$sql1 = "INSERT into meeting_db(meetingname) VALUES ('$name')";
 
 if ($conn->query($sql1) === TRUE) {
 

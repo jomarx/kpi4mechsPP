@@ -30,14 +30,14 @@ echo date("m/d/Y H:i:s");
 echo "</span>";
 
 
-$servername = "192.168.42.85";
-$username = "nodemcu1";
-$password = "secret";
+$servername = "127.0.0.1";
+$username = "root";
+$password = "";
 $dbname = "kpi_mech";
 
 try {
 	// Create connection
-	$conn = new mysqli($servername, $username, $password, $dbname);
+	$conn = new mysqli($servername, $username, "", $dbname);
 	// Check connection
 	if ($conn->connect_error) {
 		die("Connection failed: " . $conn->connect_error);
@@ -46,7 +46,7 @@ try {
 	//Start connection
 	
 //	$sql = "SELECT * from mbreak_db";
-		$sql = "SELECT sm_db.AssetName, sm_db.SerialNo,sm_db.Make,sm_db.Model,sm_db.Supplier,sm_db.Category,sm_db.Location,sm_db.AssetStatus,sm_db.AssetCondition,mbreak_db.StartDate,mbreak_db.EndDate,mbcode_db.details as det from sm_db INNER JOIN mbreak_db ON sm_db.RFID=mbreak_db.SpecialSerial INNER JOIN task_db ON task_db.ID=mbreak_db.TaskID INNER JOIN mbcode_db ON task_db.details=mbcode_db.id";
+		$sql = "SELECT sm_db.AssetName, sm_db.SerialNo,sm_db.Make,sm_db.Model,sm_db.Supplier,sm_db.Category,sm_db.Location,sm_db.AssetStatus,sm_db.AssetCondition,mbreak_db.StartDate,mbreak_db.EndDate,mbcode_db.details as det from sm_db INNER JOIN mbreak_db ON sm_db.SpecialSerial=mbreak_db.SpecialSerial INNER JOIN task_db ON task_db.ID=mbreak_db.TaskID INNER JOIN mbcode_db ON task_db.details=mbcode_db.id";
 
 	$result = $conn->query($sql);
     		

@@ -15,13 +15,12 @@ if ($_SESSION["id"]!=""){
 
 ?>
 <body>
-<b><center><br><br>
-<p> Hanes Global Supply Chain Philippines Inc<br><br><br>Multifunction Kiosk<br><BR>Scan ID :</p></b>
+<b><center><br><img src="hb.jpg"><br>
+<p> Hanes Global Supply Chain Philippines Inc<br><br><br>Multifunction Kiosk<br><BR>Scan ID :</p>
 <form action="login.php" method="post" id="myform">
-<input type="password" name="userid" id="userid" placeholder="userid" autofocus>
+<input type="password" name="userid" id="userid" placeholder="userid">
 
 <button id="submit" >SUBMIT</button>
-</center>
 
 
 <script>
@@ -45,7 +44,8 @@ $('#submit').click(function(){
 
 </script>
 </form>
-
-   <div id="result1"></div>
+<font color="red">
+<div id="result1"></div>
+</font></center></b>
 </body>
 </html>

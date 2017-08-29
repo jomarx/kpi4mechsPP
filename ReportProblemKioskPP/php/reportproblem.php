@@ -6,29 +6,33 @@
 
 <body>
 <b>
+<font color=red>
+<?php
+session_start();
+include("config.php");
+if (isset($_SESSION["submiterror"])){
+	echo "Wrong data encoded, please try again!<br>";
+	unset($_SESSION["submiterror"]);
+}
+?>
+</font><br>
 <p>Problem Type :</p>
 <form action="report.php" method="post" id="myform">
 
 <select name="mbcode" id="mbcode">
 <?php
-
-include("config.php");
 $sql = "SELECT * FROM mbcode_db";
 $result = $conn->query($sql);
-while($row = $result->fetch_assoc()){ 
-
-?>
- <option value="<?php echo $row["id"] ?>"><?php echo $row["details"] ?></option>
-<?php
-
+while($row = $result->fetch_assoc()){
+	?>
+	<option value="<?php echo $row["id"] ?>"><?php echo $row["details"] ?></option>
+	<?php
 }
 
-
 ?>
 
-
-
 </select>
+
 <br>
 <p>Machine Type :</p>
 <select name="machineType" id="machineType">
@@ -110,8 +114,25 @@ $('#submit').click(function(){
 
 </form>
 <BR>
-<a href="home.php">Back</a>
-<BR><BR>
-<a href="signout.php">Exit Session</a>
+<?php
+//logout auto menu
+if ($_SESSION["sourceLoc"]=='2') {
+	//from meetinghome
+	?>
+	<a href="meetinghome.php">Back to Main Menu</a><BR>
+	<a href="meetinglogout.php">Exit Session</a>
+	<?php
+} else if ($_SESSION["sourceLoc"]=='1') {
+	//from home
+	?>
+	<a href="home.php">Back to Main Menu</a><BR>
+	<a href="signout.php">Exit Session</a>
+	<?php
+} else {
+	//javascript back
+	echo "<a href='javascript:history.back(1);'>Back to main menu</a>";
+}
+?>
+<BR>
 </body>
 </html>

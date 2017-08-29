@@ -29,24 +29,18 @@ echo "<span style='font-size: 25pt'>";
 //echo "<BR><b>Task Database (for reports)</b><BR><BR>";
 echo "</span>";
 
+session_start();
+error_reporting(0);
+include("config.php");
 
-$servername = "192.168.143.220";
-$username = "jomar";
-$password = "magic44ever";
-$dbname = "kpi_mech";
-
-try {
-	// Create connection
-	$conn = new mysqli($servername, $username, $password, $dbname);
-	// Check connection
-	if ($conn->connect_error) {
-		die("Connection failed: " . $conn->connect_error);
-	}
-	
+$userid=$_SESSION["id"];
+echo "<b>";
+echo "User ID: ".$userid;
+echo "<br><br></b>";	
 	//Start connection
 	
 //	$sql = "SELECT * from mbreak_db";
-		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,mech_db.dayOrNight,mbcode_db.details,task_db.StartTime,task_db.EndTime,task_db.StartDate,task_db.BreakStartTime,task_db.EndDate, task_db.comments, task_db.commentsMech, task_db.machineType, task_db.AssignedTime, task_db.AffectedUsers from mech_db INNER JOIN task_db ON task_db.Assignee=mech_db.empID INNER JOIN mbcode_db ON mbcode_db.id=task_db.details WHERE task_db.Status <> 7 ORDER BY `ID` DESC";
+		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,mech_db.dayOrNight,mbcode_db.details,task_db.StartTime,task_db.EndTime,task_db.StartDate,task_db.BreakStartTime,task_db.EndDate, task_db.comments, task_db.commentsMech, task_db.AffectedUsers, task_db.machineType, task_db.AssignedTime from mech_db INNER JOIN task_db ON task_db.Assignee=mech_db.empID INNER JOIN mbcode_db ON mbcode_db.id=task_db.details WHERE task_db.Status <> 7 AND Date(StartDate) = curdate() AND Assignee=$userid ORDER BY `ID` DESC";
 
 	$result = $conn->query($sql);
     		
@@ -55,7 +49,7 @@ try {
 		echo "<span style='font-size: 15pt'>";
 		echo "<table style='border:4px solid black; width: 100%'>";
 		//echo "<font size='30'>";
-		echo "<tr><th>Task ID</th><th>Date Time</th><th>Location</th><th>First Name</th><th>Last Name</th><th>Short Name</th><th>Day Or Night</th><th>Details</th><th>Machine Type</th><th>Break Start</th><th>Assigned Time</th><th>Start Date</th><th>End Date</th><th>Comments</th><th>Comments Mech</th><th>Affected Users</th><th>Duration (m)</th><th>Machine Downtime</th><th>Response Time(m)</th></tr>";
+		echo "<tr><th>TaskID</th><th>DateTime</th><th>location</th><th>FirstName</th><th>LastName</th><th>ShortName</th><th>DayOrNight</th><th>Details</th><th>MachineType</th><th>BreakStart</th><th>AssignedTime</th><th>StartDate</th><th>EndDate</th><th>Comments</th><th>Comments Mech</th><th>Affected Users</th><th>Duration (m)</th><th>ResponseTime(m)</th></tr>";
 		echo "</span>";
 		
 		// <th>SpecialSerial</th><th>StartDate</th><th>EndDate</th><th>Details</th>
@@ -83,7 +77,6 @@ try {
 			$to_time1 = strtotime($row["StartTime"]);
 			$from_time1 = strtotime($row["AssignedTime"]);
 			$duration1 = round(abs($to_time1 - $from_time1) / 60,2);
-			$duration2 = $duration * round($row["AffectedUsers"]);
 			
 			echo "<td>".$row["BreakStartTime"]."</td>";
 			echo "<td>".$row["AssignedTime"]."</td>";
@@ -96,11 +89,9 @@ try {
 		
 		if ($duration >1){
 			echo "<td>".floor($duration)."</td>";
-			echo "<td>".floor($duration2)."</td>";	
 			echo "<td>".floor($duration1)."</td>";	
 		} else {
 			echo "<td>".floor($duration)."</td>";
-			echo "<td>".floor($duration2)."</td>";	
 			echo "<td>".floor($duration1)."</td>";	
 		}
 		
@@ -115,19 +106,29 @@ try {
 		echo "<BR><b>Task Database (for reports) </b><BR><BR>";
 	}
 	else {
-    		echo "No results";
+    		echo "No results<br><br>";
+			
 	}
-	
-	
-	
-	
-	
-	
+?>
+
+<?php
+//logout auto menu
+if ($_SESSION["sourceLoc"]=='2') {
+	//from meetinghome
+	?>
+	<a href="meetinghome.php">Back to Main Menu</a><BR>
+	<a href="meetinglogout.php">Exit Session</a>
+	<?php
+} else if ($_SESSION["sourceLoc"]=='1') {
+	//from home
+	?>
+	<a href="home.php">Back to Main Menu</a><BR>
+	<a href="signout.php">Exit Session</a>
+	<?php
+} else {
+	//javascript back
+	echo "<a href='javascript:history.back(1);'>Back to main menu</a>";
 }
-catch(PDOException $e) {
-     echo "Error: " . $e->getMessage();
-}
-$conn = null;
 ?>
 
 </body>

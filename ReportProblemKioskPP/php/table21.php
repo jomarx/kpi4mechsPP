@@ -20,11 +20,11 @@ $servername = "192.168.143.220";
 $username = "jomar";
 $password = "magic44ever";
 $dbname = "kpi_mech";
-$style3 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #ffff00; font-size: 40px; ' align='center'>";//format if StartTime exceed $limit in minutes (yellow)
-$style1 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #ff6666; font-size: 40px; ' align='center'>";//format if StartTime exceed $limit in minutes (red)
+$style3 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #ffff00; font-size: 30px; ' align='center'>";//format if StartTime exceed $limit in minutes (yellow)
+$style1 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #ff6666; font-size: 30px; ' align='center'>";//format if StartTime exceed $limit in minutes (red)
 
-$style2 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #ffffff; font-size: 40px; ' align='center'>";//format otherwise (white)
-$style4 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #22CA2F; font-size: 40px; ' align='center'>";//format if StartTime = 0 (green)
+$style2 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #ffffff; font-size: 30px; ' align='center'>";//format otherwise (white)
+$style4 = "<td style = 'wlocationth: 150px; border: 4px solid black; background-color: #22CA2F; font-size: 30px; ' align='center'>";//format if StartTime = 0 (green)
 $limit = 15;
 $limit2 = 30;
 
@@ -39,7 +39,7 @@ try {
 	$sql = "SELECT t.ID, location, kp.ShortName,BreakStartTime, StartTime, EndTime, kpi.details, t.machineType FROM task_db t JOIN kpi_mech.mbcode_db kpi on t.details=kpi.id JOIN kpi_mech.mech_db kp on t.Assignee=kp.empID WHERE (t.status != 3 and t.status != 7)";
 	$result = $conn->query($sql);
 	if ($result->num_rows > 0) {
-		echo "<span style='font-size: 25pt'>";
+		echo "<span style='font-size: 20pt'>";
 		echo "<table style='border:4px solid black; width: 100%'>";
 		//echo "<font size='30'>";
 		echo "<tr><th>Task ID</th><th>Location</th><th>Assignee</th><th>ReportedTime</th><th>StartTime</th><th>EndTime</th><th>BreakdownType</th><th>MachineType</th></tr>";

@@ -21,8 +21,14 @@ $sec = "600";
 
 	</style>
 <body>
-
+<BR><b>Task Database (for Supervisor) </b><BR>
+<form action="table51ppsvsubmit.php" method="post" id="myform">
+<p><b>Enter desired cell : </b></p><input type="text" name="cell" id="cell" placeholder="cell" value="1">
+<button id="submit" >SUBMIT</button>
+</form><br>
 <?php
+
+
 echo "<center>";
 echo "<span style='font-size: 25pt'>";
 //echo date("m/d/Y H:i:s");
@@ -30,23 +36,17 @@ echo "<span style='font-size: 25pt'>";
 echo "</span>";
 
 
-$servername = "192.168.143.220";
-$username = "jomar";
-$password = "magic44ever";
-$dbname = "kpi_mech";
+error_reporting(0);
+include("config.php");
 
-try {
-	// Create connection
-	$conn = new mysqli($servername, $username, $password, $dbname);
-	// Check connection
-	if ($conn->connect_error) {
-		die("Connection failed: " . $conn->connect_error);
-	}
+session_start();
+
+$cell=$_SESSION["cell"];
 	
 	//Start connection
 	
 //	$sql = "SELECT * from mbreak_db";
-		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,mech_db.dayOrNight,mbcode_db.details,task_db.StartTime,task_db.EndTime,task_db.StartDate,task_db.BreakStartTime,task_db.EndDate, task_db.comments, task_db.commentsMech, task_db.machineType, task_db.AssignedTime, task_db.AffectedUsers from mech_db INNER JOIN task_db ON task_db.Assignee=mech_db.empID INNER JOIN mbcode_db ON mbcode_db.id=task_db.details WHERE task_db.Status <> 7 ORDER BY `ID` DESC";
+		$sql = "SELECT task_db.ID,task_db.location,mech_db.FirstName,mech_db.LastName,mech_db.ShortName,mech_db.dayOrNight,mbcode_db.details,task_db.StartTime,task_db.EndTime,task_db.StartDate,task_db.BreakStartTime,task_db.EndDate, task_db.comments, task_db.commentsMech, task_db.machineType, task_db.AssignedTime, task_db.AffectedUsers from mech_db INNER JOIN task_db ON task_db.Assignee=mech_db.empID INNER JOIN mbcode_db ON mbcode_db.id=task_db.details WHERE task_db.Status <> 7 AND task_db.location = '$cell' AND Date(StartDate) = curdate() ORDER BY `ID` DESC";
 
 	$result = $conn->query($sql);
     		
@@ -117,18 +117,27 @@ try {
 	else {
     		echo "No results";
 	}
-	
-	
-	
-	
-	
-	
-}
-catch(PDOException $e) {
-     echo "Error: " . $e->getMessage();
-}
-$conn = null;
-?>
 
+?>
+<BR>
+<?php
+//logout auto menu
+if ($_SESSION["sourceLoc"]=='2') {
+	//from meetinghome
+	?>
+	<a href="meetinghome.php">Back to Main Menu</a><BR>
+	<a href="meetinglogout.php">Exit Session</a>
+	<?php
+} else if ($_SESSION["sourceLoc"]=='1') {
+	//from home
+	?>
+	<a href="home.php">Back to Main Menu</a><BR>
+	<a href="signout.php">Exit Session</a>
+	<?php
+} else {
+	//javascript back
+	echo "<a href='javascript:history.back(1);'>Back to main menu</a>";
+}
+?>
 </body>
 </html>

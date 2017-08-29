@@ -153,7 +153,12 @@ $resultstatus5 = $conn->query($sqlstatus5);
 															}
 						
 					
-										}			
+										} else {
+											//set task to unassigned
+											$setTaskUnassigned = "UPDATE kpi_mech.task_db SET Status='0',NotifNo='0',Assignee='0' WHERE ID = $idstatus5" ;
+											$conn->query($setTaskUnassigned);
+
+										}										
 
 					
 					}			
@@ -192,7 +197,12 @@ $resultstatus6 = $conn->query($sqlstatus6);
 															}
 						
 					
-										}			
+										} else {
+											//set task to unassigned
+											$setTaskUnassigned = "UPDATE kpi_mech.task_db SET Status='0',NotifNo='0',Assignee='0' WHERE ID = $idstatus6" ;
+											$conn->query($setTaskUnassigned);
+
+										}	
 
 					
 					}			

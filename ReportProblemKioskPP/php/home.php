@@ -14,14 +14,16 @@
 	}
 	
 ?>
-
 <body>
-
-
 <?php
 
 error_reporting(0);
 include("config.php");
+
+//source location for go back home/back redirect
+//1 = home.php
+//2 = meetinghome.php
+$_SESSION["sourceLoc"]='1';
 
 $userid=$_SESSION["id"];
 
@@ -34,7 +36,7 @@ if ($result->num_rows > 0) {
 		echo $row["FirstName"];
 		echo " ";		
 		echo $row["LastName"];
-		echo ",   ano ang gusto mo gawin ngayon ? :";	
+		echo ",   ano ang gusto mo gawin ngayon ? :<br><br>";	
 	
 	if ($row["mechanicID"]=='1'){
 		
@@ -57,8 +59,9 @@ if ($result->num_rows > 0) {
 	<a href="logout.php">Mechanic Logout</a><?php
 	}
 	if ($row["SPReporting"]=='1'){
-		?><BR>
-		<BR><a href="reportproblem.php">Sewing Problem Reporting</a><BR>
+		?><BR><BR>
+		<a href="reportproblem.php">Sewing Problem Reporting</a><BR><BR>
+		<a href="table51ppsv.php">Task Database (for Supervisor)</a><BR>
 		<?php
 	}
 
@@ -66,10 +69,42 @@ if ($result->num_rows > 0) {
 ?>	
 <br><br><br>
 
+	<br>
 	<a href="hr.php">HR Express Form</a><br><br>
+	<?php
+	if ($row["hrTeam"]=='1'){
+		?>
+		<a href="hrview.php">HR Express Viewer</a><BR>
+		<BR>
+		<?php
+	}
+	?>
 	<a href="kaizen.php">Kaizen Express Form</a><br><br>
+	<a href="kaizenview.php">Kaizen Viewer</a><BR>
+	<BR>
+	<?php
+	if ($row["kaiTeam"]=='1'){
+		$_SESSION["kaiTeam"]=$row["kaiTeam"];
+	}
+	?>
 	<a href="nearmiss.php">Near Miss / Hazard Reporting</a><br><br>
-	<a href="compl.php">Compliance Committee - Comments and Suggestions</a><br><br>
+	<a href="nearmissview.php">Near Miss Viewer</a><BR>
+	<BR>
+	<?php
+	if ($row["nmTeam"]=='1'){
+		$_SESSION["nmTeam"]=$row["nmTeam"];
+	}
+	?>
+	<a href="compl.php">Compliance Committee - Comments and Suggestions</a><BR><BR>
+	<?php
+	if ($row["comComTeam"]=='1'){
+	?>
+		<a href="complview.php">Compliance Committee Viewer</a><BR>
+		<BR>
+		<?php
+	}
+	?>
+	<br><br>
 	
 
 <br><br><br>

@@ -94,6 +94,24 @@ while($row = $result->fetch_assoc()){
 
 ?>
 
-<a href="meetinghome.php">BACK</a>
+<?php
+//logout auto menu
+if ($_SESSION["sourceLoc"]=='2') {
+	//from meetinghome
+	?>
+	<a href="meetinghome.php">Back to Main Menu</a><BR>
+	<a href="meetinglogout.php">Exit Session</a>
+	<?php
+} else if ($_SESSION["sourceLoc"]=='1') {
+	//from home
+	?>
+	<a href="home.php">Back to Main Menu</a><BR>
+	<a href="signout.php">Exit Session</a>
+	<?php
+} else {
+	//javascript back
+	echo "<a href='javascript:history.back(1);'>Back to main menu</a>";
+}
+?>
 </body>
 </html>

@@ -53,7 +53,7 @@ try {
 	if ($typer == 5) {
 		$sql1 = "UPDATE kpi_mech.task_db SET Status = 5 WHERE ID = $var2;";
 	}
-	//Set Status to started
+	//Set Status to started (no update on start time)
 	if ($typer == 6) {
 		$sql1 = "UPDATE kpi_mech.task_db SET Status = 2 WHERE ID = $var2;";
 	}
@@ -66,52 +66,52 @@ try {
 			while($row = $result->fetch_assoc()) {
 				//echo "works";
 				if ($typer == 1) {
-					echo $row["ID"].",".$row["location"].",".$row["Status"];
+					echo $row["ID"].",".$row["location"].",".$row["Status"].",".$row["Assignee"];
 				}
 				
 			}
 		}
 	}
 	if ($typer == 2) {
-		echo "StartTime and Status updated";
+		echo "StartTime and Status updated, ";
 	}
 	
 	if ($typer == 3) {
-		echo "EndTime and Status updated";
+		echo "EndTime and Status updated, ";
 		
 		$sql2 = "UPDATE kpi_mech.mech_db SET status = 0 WHERE NotifNo = $var1;";
 		$result = $con->query($sql2);
-		echo "Mech_db status updated";
+		echo "Mech_db status updated, ";
 		
 		$sql3 = "UPDATE kpi_mech.mbreak_db SET EndDate = (now()) WHERE TaskID = $var2";
 		$result = $con->query($sql3);
-		echo "mbreak_db status updated";
+		echo "mbreak_db status updated, ";
 		
 	}
 	if ($typer == 4) {
 		//querytask.php?typer=4&taskID=570&NotifNo=1&EmpNo=49
-		echo "TIMEOUT updated";
+		echo "TIMEOUT updated, ";
 		
 		$sql2 = "INSERT INTO kpi_mech.timeout_db (taskID, mech, date, time) values ($var2, $EmpNo, CURDATE(), Curtime());";
 		$result = $con->query($sql2);
-		echo "timeout_db entry inserted";
+		echo "timeout_db entry inserted, ";
 		
 		$sql3 = "UPDATE kpi_mech.mech_db SET status = 0 WHERE NotifNo = $var1;";
 		$result = $con->query($sql3);
-		echo "mech_db status updated";
+		echo "mech_db status updated, ";
 	}
 	
 	if ($typer == 5) {
 		//querytask.php?typer=5&taskID=570&NotifNo=1&EmpNo=49
-		echo "Cancel updated";
+		echo "Cancel updated, ";
 		
 		$sql2 = "INSERT INTO kpi_mech.cancel_db (taskID, mech, date, time) values ($var2, $EmpNo, CURDATE(), Curtime());";
 		$result = $con->query($sql2);
-		echo "timeout_db entry inserted";
+		echo "Cancel_db entry inserted, ";
 		
 		$sql3 = "UPDATE kpi_mech.mech_db SET status = 0 WHERE NotifNo = $var1;";
 		$result = $con->query($sql3);
-		echo "mech_db status updated";
+		echo "mech_db status updated, ";
 	}
 	if ($typer == 6) {
 		echo "Status updated";

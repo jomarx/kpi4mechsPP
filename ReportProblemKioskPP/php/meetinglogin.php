@@ -14,8 +14,8 @@ if ($result->num_rows > 0) {
 	$_SESSION["id"]=$row["empNo"];
 	header("location:meetinghome.php");
 } else {
+	$_SESSION["error1"]=1;
 	header("location:meeting.php");
-	//echo "wrong password";
 }
 $conn->close();
 

@@ -33,7 +33,7 @@ if (($result->num_rows > 0)&&($result2->num_rows > 0)&&($result3->num_rows < 1))
 
 if (($result->num_rows > 0)&&($result3->num_rows < 1)) {
 
-$sql1 = "INSERT into meetingatt_db(id,empID,curtime,meetingID,username) VALUES ('','$name','$time','$id1','$uname')";
+$sql1 = "INSERT into meetingatt_db(empID,curtime,meetingID,username) VALUES ('$name','$time','$id1','$uname')";
 
 	if ($conn->query($sql1) === TRUE) {
 		$_SESSION["success1"]='1';

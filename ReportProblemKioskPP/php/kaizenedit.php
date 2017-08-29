@@ -4,7 +4,7 @@
 <script src="js/submit.js"></script>
 </head>
 <body>
-<B>NEAR MISS / HAZARD REPORTING</B><BR>
+<B>KAIZEN EXPRESS FORM</B><BR>
 <?php 
 session_start();
 include("config.php");
@@ -16,24 +16,41 @@ $row = $result->fetch_assoc();
 
 if ($result->num_rows > 0) {
 
-	echo "Pangalan: ".$row["FirstName"]." ".$row["ShortName"]." ".$row["LastName"]."&nbsp&nbsp&nbsp&nbsp Clock No:".$userid;
+	echo "Pangalan: ".$row["FirstName"]." ".$row["ShortName"]." ".$row["LastName"]."<b>&nbsp&nbsp&nbsp&nbsp Clock No: </b>".$userid;
+	echo "<br><br>";
+	?>
+	<font color="red">
+	<?php 
+	if (isset($_SESSION["success"])){
 
+		echo "Submit data is a success!";
+		unset($_SESSION["success"]);
 
+	}
+	
+		if (isset($_SESSION["notsuccess"])){
+
+		echo "Please complete the form, there are missing data!";
+		unset($_SESSION["notsuccess"]);
+
+	}
+	
 }	
 
-?>
-<form action="nearmisssubmit.php" method="post" id="myform">
-<select id="category" name="category">
-<option value="1">Near Miss</option>
-<option value="2">Hazard Report</option>
-<option value="8">Others</option>
-
-
-</select>
-<input type="text" name="other" id="other" placeholder="Others">
-<br>
-<textarea id="question" name="question" style="width:500px;height:300px"></textarea>
-<BR><BR>
+?></font><BR><BR><b>
+<form action="kaizensubmit.php" method="post" id="myform">
+&nbsp;Cell : 
+<input type="text" name="cellno" id="cellno" placeholder="Cell Number">
+&nbsp;Date : 
+<input type="text" name="date" id="date" placeholder="Date" value="<?php echo date("m/d/Y H:i:s");?>">
+<BR>
+<p>Current Situation : </b></p>
+<textarea id="question1" name="question1" style="width:500px;height:150px"></textarea>
+<BR>
+<p><b>Target Situation Process: </b></p>
+<textarea id="question2" name="question2" style="width:500px;height:150px"></textarea>
+<BR>
+<BR>
 <button id="submit" >SUBMIT</button>
 
 
@@ -57,15 +74,6 @@ if ($_SESSION["sourceLoc"]=='2') {
 } else {
 	//javascript back
 	echo "<a href='javascript:history.back(1);'>Back to main menu</a>";
-}
-?>
-
-<?php
-if (isset($_SESSION["success"])){
-
-echo "Success";
-unset($_SESSION["success"]);
-
 }
 ?>
 </body>
