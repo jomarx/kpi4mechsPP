@@ -39,7 +39,7 @@ int statusCode = 0;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 2;
+int mechanicID = 5;
 
 //buzzer
 const int buzzer = 2;
@@ -113,6 +113,7 @@ void setup() {
 	
 	displayClear();
 
+	WifiStrength ();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
 	display.drawString(64, 22, "Mechanic ID :\n" + String(mechanicID));
 	display.display();
@@ -124,6 +125,7 @@ void setup() {
 	delayer(3);
 
 	displayClear();
+	WifiStrength ();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
 	display.drawString(64, 22, "WIFI: Connected" );
 	display.print("\n");
@@ -143,6 +145,7 @@ void loop() {
 	
 	delayer(2);
 	displayClear();
+	WifiStrength ();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
 	display.drawString(64, 22, "Getting Tasks\n");
 	display.display();
@@ -233,8 +236,7 @@ void loop() {
 		display.setTextAlignment(TEXT_ALIGN_LEFT);
 		
 		//get WIFI strength data
-		tempWifiStr = WifiStrength();
-		display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+		WifiStrength ();
 		
 		display.drawString(0, 15, "Sew Line # " + String(cellLocation));
 		display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
@@ -258,8 +260,7 @@ void loop() {
 				OnNeoPixel();
 				
 				displayClear();
-				tempWifiStr = WifiStrength();
-				display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+				WifiStrength ();
 				display.drawString(0, 15, "Sew Line # " + String(cellLocation));
 				display.drawString(0, 30, "<Task Done>");
 				display.display();
@@ -279,6 +280,8 @@ void loop() {
 				}
 				
 				buzzerFunction(2);
+				
+				buttonState1 = HIGH; //reset button status
 				
 				Serial.print("starting loop to wait to finish task");
 				for (int tempTimer = 0;tempTimer <= 3;tempTimer++)  {
@@ -305,8 +308,7 @@ void loop() {
 						displayClear();
 						
 						//get WIFI strength data
-						tempWifiStr = WifiStrength();
-						display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+						WifiStrength ();
 						display.drawString(0, 15, "Elapsed Time: " + String(ElapsedTime) + "mins");
 						display.drawString(0, 30, "Sew Line #: " + String(cellLocation));
 						display.drawString(0, 45, "<Task Done>");
@@ -328,7 +330,9 @@ void loop() {
 				Serial.print("done task!!");
 				displayClear();
 						
+				WifiStrength ();
 				display.setTextAlignment(TEXT_ALIGN_CENTER);
+				
 				display.drawString(64, 8, "Task Done\n Requesting new task \n");
 				display.display();
 				
@@ -356,8 +360,7 @@ void loop() {
 
 				display.setTextAlignment(TEXT_ALIGN_LEFT);
 				//get WIFI strength data
-				tempWifiStr = WifiStrength();
-				display.drawStringMaxWidth(0, 0, 128, "WiFi: " + String(tempWifiStr) + "  BT: " + String(tempWifiStr));
+				WifiStrength ();
 				display.drawString(0, 15, "Sew Line # " + String(cellLocation));
 				display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
 				display.drawString(0, 45, "START         END");
@@ -372,13 +375,13 @@ void loop() {
 				Serial.println("function to update DB, 15mins have past, auto assign");
 		
 				displayClear();
+				WifiStrength ();
 				display.setTextAlignment(TEXT_ALIGN_CENTER);
 				display.drawString(64, 22, "No ACK!\nTransferring");
 				display.display();
 		
 				//SQL start
-				typePhp(5);
-				
+				typePhp(4);
 				
 				buzzerFunction(4);
 				TNLeaveLoop = 2;	
@@ -436,6 +439,7 @@ void loop() {
   } else {
 	  	OnNeoPixel();
 		displayClear();
+		WifiStrength ();
 		display.setTextAlignment(TEXT_ALIGN_CENTER);
 		display.drawString(64, 22, "No task,\n sleeping for 1min");
 		Serial.println("No task,\n sleeping for 1min");
@@ -472,7 +476,7 @@ int typePhp (int typer){
 		postData += taskID;
 	}
 	
-	if ((typer==5)||(typer==6)) {
+	if ((typer==5)||(typer==4)) {
 		Serial.println("For Cancel/Timeout data");
 		postData += "&EmpNo=";
 		postData += EmpNo;
@@ -566,6 +570,7 @@ void wifiConnect () {
 			display.setFont(ArialMT_Plain_16);
 			
 			displayClear();
+			WifiStrength ();
 			display.setTextAlignment(TEXT_ALIGN_CENTER);
 			display.drawString(64, 22, "ESP8266 reset!");
 			display.display();
@@ -661,7 +666,24 @@ int WifiStrength () {
 	} else {
 		bars = 0;
 	}
-	return bars;
+		
+	// read the battery level from the ESP8266 analog in pin.
+	// analog read level is 10 bit 0-1023 (0V-1V).
+	// our 1M & 220K voltage divider takes the max
+	// lipo value of 4.2V and drops it to 0.758V max.
+	// this means our min analog read value should be 580 (3.14V)
+	// and the max analog read value should be 774 (4.2V).
+	int level = analogRead(A0);
+	Serial.print("A0 level: ");
+	Serial.print(level);
+
+	// convert battery level to percent
+	level = map(level, 580, 774, 0, 100);
+	Serial.print("Battery level: "); Serial.print(level); Serial.println("%");
+	// prints WIFI / Battery on screen	
+	display.setTextAlignment(TEXT_ALIGN_LEFT);
+	display.drawStringMaxWidth(0, 0, 128, "WiFi:" + String(bars) + " BT:" + String(level));
+	display.display();	
 }
 
 void CancelTask() {
@@ -671,6 +693,7 @@ void CancelTask() {
 	
 	if (cellLocation != "") {
 		displayClear();
+		WifiStrength ();
 		display.setTextAlignment(TEXT_ALIGN_CENTER);
 		display.drawString(64, 18, "Task cancelled!\nReassigning");
 		display.display();

@@ -22,8 +22,10 @@ int tempWifiStr = 0;
 //wifi
 //char ssid[] = "kpi4mech"; // your SSID
 //char pass[] = "kpi4mech1"; // your SSID Password
-char ssid[] = "HanesSucat"; // your SSID
-char pass[] = "alabang1"; // your SSID Password
+//char ssid[] = "HanesSucat"; // your SSID
+//char pass[] = "alabang1"; // your SSID Password
+char ssid[] = "outsourcing1.25s"; // your SSID
+char pass[] = "dbafe12345!!"; // your SSID Password
 
 
 void setup(void) {
@@ -95,6 +97,7 @@ void loop(void) {
 		display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
 		display.drawString(64, 22, "button test - Press Start");
 		display.display();
+		battery_level();
 		yield();
 		delay(500);
 		
@@ -230,4 +233,23 @@ int WifiStrength () {
 		bars = 0;
 	}
 	return bars;
+}
+
+void battery_level() {
+ 
+  // read the battery level from the ESP8266 analog in pin.
+  // analog read level is 10 bit 0-1023 (0V-1V).
+  // our 1M & 220K voltage divider takes the max
+  // lipo value of 4.2V and drops it to 0.758V max.
+  // this means our min analog read value should be 580 (3.14V)
+  // and the max analog read value should be 774 (4.2V).
+  int level = analogRead(A0);
+  Serial.print("A0 level: ")
+  Serial.print(level);
+ 
+  // convert battery level to percent
+  level = map(level, 580, 774, 0, 100);
+  Serial.print("Battery level: "); Serial.print(level); Serial.println("%");
+  // turn on wifi if we aren't connected
+   
 }
