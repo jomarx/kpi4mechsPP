@@ -147,6 +147,12 @@ void setup() {
 
 void loop() {
 	
+	//Increment boot number and print it every reboot
+	++bootCount;
+	Serial.println("Boot number: " + String(bootCount));
+	
+	print_wakeup_reason();
+	
 	Serial.println();
 	Serial.println("Start Main loop");	
 	
@@ -697,7 +703,7 @@ int WifiStrength () {
 	// lipo value of 4.2V and drops it to 0.758V max.
 	// this means our min analog read value should be 580 (3.14V)
 	// and the max analog read value should be 774 (4.2V).
-	int level = analogRead(A0);
+	int level = analogRead(34);
 	Serial.print("A0 level: ");
 	Serial.print(level);
 
