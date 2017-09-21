@@ -25,8 +25,10 @@ int tempWifiStr = 0;
 //char pass[] = "kpi4mech1"; // your SSID Password
 //char ssid[] = "HanesSucat"; // your SSID
 //char pass[] = "alabang1"; // your SSID Password
-char ssid[] = "outsourcing1.25s"; // your SSID
-char pass[] = "dbafe12345!!"; // your SSID Password
+char ssid[] = "outsourcing1.25"; // your SSID
+char pass[] = "dbafe54321!"; // your SSID Password
+//char ssid[] = "outsourcing2.5"; // your SSID
+//char pass[] = "alabang1"; // your SSID Password
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
@@ -102,7 +104,7 @@ void loop(void) {
 	print_wakeup_reason();
 		
 	displayClear();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.setTextAlignment(TEXT_ALIGN_LEFT);
 	
 	tempWifiStr = WifiStrength();
 	
@@ -121,10 +123,11 @@ void loop(void) {
 		Serial.print(".");
 		
 		tempWifiStr = WifiStrength();
-		display.drawString(20, 0, "WiFi: " + String(tempWifiStr));
-		display.drawString(64, 22, "button test - Press Start");
+		int tempBatt = battery_level();
+		display.drawString(0, 0, "WiFi: " + String(tempWifiStr) + "BT: " + String(tempBatt));
+		display.drawString(34, 22, "button test - Press Start");
 		display.display();
-		battery_level();
+		//battery_level();
 		yield();
 		digitalWrite(ledPin, LOW);
 		delay(500);
@@ -279,7 +282,7 @@ int WifiStrength () {
 	return bars;
 }
 
-void battery_level() {
+int battery_level() {
  
   // read the battery level from the ESP8266 analog in pin.
   // analog read level is 10 bit 0-1023 (0V-1V).
@@ -287,15 +290,24 @@ void battery_level() {
   // lipo value of 4.2V and drops it to 0.758V max.
   // this means our min analog read value should be 580 (3.14V)
   // and the max analog read value should be 774 (4.2V).
-  int level = analogRead(A0);
-  Serial.print("A0 level: ");
+  int level = analogRead(34);
+  Serial.print("analog level: ");
   Serial.print(level);
  
   // convert battery level to percent
-  level = map(level, 580, 774, 0, 100);
+ level = map(level, 2900, 4000, 1, 100);
   Serial.print("Battery level: "); Serial.print(level); Serial.println("%");
   // turn on wifi if we aren't connected
-   
+
+	float VBAT = (127.0f/100.0f) * 3.30f * float(analogRead(34)) / 4096.0f;  // LiPo battery
+	Serial.print("Battery Voltage = ");
+	Serial.print(VBAT, 2);
+	Serial.println(" V");
+    float level1 = map(VBAT, 3, 4.2, 1, 100);
+	Serial.print("battery percentage level: ");
+	Serial.print(level1);
+	
+	return level1;
 }
 
 void print_wakeup_reason(){
