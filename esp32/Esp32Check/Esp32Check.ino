@@ -21,12 +21,12 @@ int buttonState = 1;
 int tempWifiStr = 0;
 
 //wifi
-//char ssid[] = "kpi4mech"; // your SSID
-//char pass[] = "kpi4mech1"; // your SSID Password
+char ssid[] = "kpi4mech"; // your SSID
+char pass[] = "kpi4mech1"; // your SSID Password
 //char ssid[] = "HanesSucat"; // your SSID
 //char pass[] = "alabang1"; // your SSID Password
-char ssid[] = "outsourcing1.25"; // your SSID
-char pass[] = "dbafe54321!"; // your SSID Password
+//char ssid[] = "outsourcing1.25"; // your SSID
+//char pass[] = "dbafe54321!"; // your SSID Password
 //char ssid[] = "outsourcing2.5"; // your SSID
 //char pass[] = "alabang1"; // your SSID Password
 
@@ -38,9 +38,16 @@ RTC_DATA_ATTR int bootCount = 0;
 //buzzer
 
 int freq = 2000;
-int channel = 0;
+int channel = 4;
 int resolution = 8;
 
+//button debounce
+
+long lastDebounceTime = 0;  // the last time the output pin was toggled
+long debounceDelay = 50;    // the debounce time; increase if the output flickers
+
+int displayUpdateCounter = 0;
+ 
 void setup() {
 	//ledcWriteTone(channel, 0);
 	
@@ -117,20 +124,42 @@ void loop(void) {
 	Serial.println("NotifHuzzah circuit tests");
 	Serial.println("button test - Press Start");
 	do {
-		digitalWrite(ledPin, HIGH);
-		displayClear();
-		buttonState = digitalRead(startButton);  
-		Serial.print(".");
+		//start
+		//https://programmingelectronics.com/tutorial-19-debouncing-a-button-with-arduino-old-version/
+		buttonState = digitalRead(startButton);
+ 
+		//filter out any noise by setting a time buffer
+		if ( (millis() - lastDebounceTime) > debounceDelay) {
+			
+			//if the button has been pressed, lets toggle the LED from "off to on" or "on to off"
+			if (buttonState == HIGH) {
+				lastDebounceTime = millis(); //set the current time
+			}
+			
+			if (displayUpdateCounter >= 20) {
+				//
+				digitalWrite(ledPin, HIGH);
+				displayClear();
+				Serial.print(".");
+				
+				tempWifiStr = WifiStrength();
+				//tempWifiStr = 1;
+				int tempBatt = battery_level();
+				//int tempBatt = 1;
+				display.drawString(0, 0, "WiFi: " + String(tempWifiStr) + "BT: " + String(tempBatt));
+				display.drawString(34, 22, "button test - Press Start");
+				display.display();
+				battery_level();
+				//yield();
+				digitalWrite(ledPin, LOW);
+				displayUpdateCounter=0;
+			}
+			
+			displayUpdateCounter++;
+
+		}//close if(time buffer)
 		
-		tempWifiStr = WifiStrength();
-		int tempBatt = battery_level();
-		display.drawString(0, 0, "WiFi: " + String(tempWifiStr) + "BT: " + String(tempBatt));
-		display.drawString(34, 22, "button test - Press Start");
-		display.display();
-		//battery_level();
-		yield();
-		digitalWrite(ledPin, LOW);
-		delay(500);
+		//end
 		
 	} while (buttonState == HIGH); 
 	
