@@ -78,6 +78,9 @@ int freq = 2000;
 int channel = 0;
 int resolution = 8;
 
+//loop state
+int loopState = 0;
+
 void setup() {
 	
 	//watchdog timer
@@ -171,6 +174,7 @@ void loop() {
 	
 	//getting tasks
 	
+	//check location variable, if empty, get from PHP
 	if (cellLocation=="") {
 		Serial.println("TypePhp(6): ");
 		typePhp(6);
@@ -194,7 +198,6 @@ void loop() {
 
 	Serial.println();
 	Serial.println("Start sending loop");
-	
 	
 	
 	while ( statusCode != 200) {
@@ -254,128 +257,44 @@ void loop() {
 		delay(10);
 
 		displayClear();
-		display.setTextAlignment(TEXT_ALIGN_LEFT);
 		
 		//get WIFI strength data
 		WifiStrength ();
 		
-		display.drawString(0, 15, "Sew Line # " + String(cellLocation));
-		display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
-		display.drawString(0, 45, "START         END");
-
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 22, "QCO Setup \n Started");
 		display.display();
-		buzzerFunction(5);
+
+		buzzerFunction(2);
+		
+		delayer(1);
 		
 		while (TNLeaveLoop < 1) {
-			
-			//buttonState1 = digitalRead(startButton);
-			//buttonState2 = digitalRead(cancelButton);
 			
 			if (countToSec > 15) {
 				BlinkNeoPixel();
 				countToSec = 0;
 			}
 				
-			if (buttonState1 == LOW && buttonState2 == HIGH) {
+			if (buttonState1 == LOW) {
+				OptionOne();
+				buttonState1 = HIGH;
+				TNLeaveLoop=2;
 				
-				OnNeoPixel();
-				
-				displayClear();
-				WifiStrength ();
-				display.drawString(0, 15, "Sew Line # " + String(cellLocation));
-				display.drawString(0, 30, "<Task Done>");
-				display.display();
-				//starting task on db
-				Serial.println("Starting task, update DB");
-				ElapsedTime=0;
-				Serial.print("start task!!");
-				Serial.println("PHP query to start task");
-				
-				
-				if (Status.toInt() != 2){
-					Serial.println("update task normally");
-					typePhp(2);
-				} else {
-					Serial.println("update task Mech Status Only");
-					typePhp(6);
-				}
-				
-				buzzerFunction(2);
-				
-				buttonState1 = HIGH; //reset button status
-				
-				Serial.print("starting loop to wait to finish task");
-				for (int tempTimer = 0;tempTimer <= 3;tempTimer++)  {
-					//buttonState1 = digitalRead(startButton);
-					delay(200);
-			
-					if (buttonState1 == HIGH && buttonState2 == LOW){
-						OptionTwo();		
-					}
-			
-					if (buttonState1 == HIGH){
-						tempTimer = 0;
-					}
-					if (countToFifteenAgain > 4500){
-						buzzerFunction(2);
-						countToFifteenAgain = 0;
-					}
-			
-					if (countToMinute > 300){
-						buzzerFunction(1);
-						countToMinute = 0;
-						ElapsedTime=ElapsedTime+1;
-						
-						displayClear();
-						
-						//get WIFI strength data
-						WifiStrength ();
-						display.drawString(0, 15, "Elapsed Time: " + String(ElapsedTime) + "mins");
-						display.drawString(0, 30, "Sew Line #: " + String(cellLocation));
-						display.drawString(0, 45, "<Task Done>");
-						display.display();
-					
-					}
-			
-					Serial.print("countToMinute : ");
-					Serial.print(countToMinute);
-					Serial.print("\n");
-					Serial.print("countToFifteenAgain : ");
-					Serial.print(countToFifteenAgain);
-					Serial.print("\n");
-					
-					countToFifteenAgain++;
-					countToMinute++;
-				}
-		
-				Serial.print("done task!!");
-				displayClear();
-						
-				WifiStrength ();
-				display.setTextAlignment(TEXT_ALIGN_CENTER);
-				
-				display.drawString(64, 8, "Task Done\n Requesting new task \n");
-				display.display();
-				
-				//query for end time
-				typePhp(3);
-				
-				buzzerFunction(2);
-				
-				OnNeoPixel();
-		
-				ESP.restart();
-				TNLeaveLoop = 2;
-				buttonState2 == HIGH;
 			}
-			if (buttonState1 == HIGH && buttonState2 == LOW){
-				OptionTwo();		
+			if (buttonState2 == LOW){
+				OptionTwo();
+				buttonState2 = HIGH;				
+			}
+			
+			if (buttonState3 == LOW){
+				OptionThree();	
+				buttonState3 = HIGH;
 			}
 
 			
-			
 			//jomar
-			
+			/*
 			if (countToMinute > 1200 && TNLeaveLoop < 1){
 				displayClear();
 
@@ -390,29 +309,7 @@ void loop() {
 				countToMinute = 0;
 				//Serial.print("function to update DB, timeout");
 				buzzerFunction(5);
-			}
-			
-			if (countToFifteen > 18000 && TNLeaveLoop < 1){
-				Serial.println("function to update DB, 15mins have past, auto assign");
-		
-				displayClear();
-				WifiStrength ();
-				display.setTextAlignment(TEXT_ALIGN_CENTER);
-				display.drawString(64, 22, "No ACK!\nTransferring");
-				display.display();
-		
-				//SQL start
-				typePhp(4);
-				
-				buzzerFunction(4);
-				TNLeaveLoop = 2;	
-				cellLocation = "";
-				taskID = "";
-				delay(200);
-				displayClear();
-				OnNeoPixel();
-			}
-
+			}*/
 
 			Serial.print("countToFifteen: ");
 			Serial.println(countToFifteen);
@@ -420,6 +317,16 @@ void loop() {
 			countToMinute++;
 			countToSec++;
 			delay(50);
+			
+			if (buttonState2 == LOW){
+				OptionTwo();
+				buttonState2 = HIGH;				
+			}
+			
+			if (buttonState3 == LOW){
+				OptionThree();	
+				buttonState3 = HIGH;
+			}
 			
 		
 		}
@@ -430,33 +337,8 @@ void loop() {
 		//reset button state
 		buttonState1 = 1;
 		buttonState2 = 1;
-
-	  /*
-	  Serial.println("Posting and updating data");
-	  
-	  postData = "deviceID=";
-	  postData += deviceID;
-	  postData += "&typer=2&taskID=";
-	  //postData = "deviceID=1&typer=2&taskID=";
-	  postData += ID;
-	  
-	  Serial.print("postData: ");
-	  Serial.println(postData);
-	  
-	  while ( statusCode != 200) {
-		client.post("/android2/qcotasker.php", contentType, postData);
-		// read the status code and body of the response
-		statusCode = client.responseStatusCode();
-		response = client.responseBody();
-		Serial.print("Status code: ");
-		Serial.println(statusCode);
-		Serial.print("Response: ");
-		Serial.println(response);
-		delay(100);
-	  }
-	  Serial.println("Update 2 successful! ");
-	  Serial.println();*/
-	  
+	
+	//if no current task found
 	} else {
 		OnNeoPixel();
 		displayClear();
@@ -466,23 +348,54 @@ void loop() {
 		Serial.println("Standby\n Mode");
 		display.display();
 		//buzzerFunction(1);
-		if (buttonState1 == HIGH && buttonState2 == LOW){
-			OptionTwo();		
+		if (buttonState1 == LOW){
+			OptionOne();
+			buttonState1 = HIGH;				
+		}
+		
+		if (buttonState2 == LOW){
+			OptionTwo();
+			buttonState2 = HIGH;				
+		}
+		
+		if (buttonState3 == LOW){
+			OptionThree();	
+			buttonState3 = HIGH;
 		}
 	}
   
-	Serial.println("Wait five seconds");
-	delay(5000);
+	Serial.println("Wait One seconds");
+	delay(1000);
 	
 	
 }
 
 int typePhp (int typer){
 	
+	displayClear();
+	WifiStrength ();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
 	
+	if (typer==1) {
+		display.drawString(64, 18, "Selecting\n Task");
+	} else if (typer==2) {
+		display.drawString(64, 18, "Inserting\n New Task");
+	} else if (typer==3) {
+		display.drawString(64, 18, "Ending\n Prev Task");
+	} else if (typer==4) {
+		display.drawString(64, 18, "Recording\n QA Defect");
+	} else if (typer==5) {
+		display.drawString(64, 18, "Recording\n PRD Box Done");
+	} else if (typer==2) {
+		display.drawString(64, 18, "Get Device\n Location");
+	}
+	
+	display.display();
+		
 	statusCode = 0;
 	response = "";
-	Serial.println("(typePhp)making POST request");
+	Serial.print("[typePhp] making POST request for: ");
+	Serial.println(typer);
 	String contentType = "application/x-www-form-urlencoded";
 	String postData = "deviceID=";
 	postData += deviceID;
@@ -687,24 +600,32 @@ int WifiStrength () {
 	} else {
 		bars = 0;
 	}
-		
-	// read the battery level from the ESP8266 analog in pin.
-	// analog read level is 10 bit 0-1023 (0V-1V).
-	// our 1M & 220K voltage divider takes the max
-	// lipo value of 4.2V and drops it to 0.758V max.
-	// this means our min analog read value should be 580 (3.14V)
-	// and the max analog read value should be 774 (4.2V).
-	int level = analogRead(34);
-	Serial.print("A0 level: ");
-	Serial.print(level);
 
-	// convert battery level to percent
-	level = map(level, 580, 774, 0, 100);
-	Serial.print("Battery level: "); Serial.print(level); Serial.println("%");
 	// prints WIFI / Battery on screen	
 	display.setTextAlignment(TEXT_ALIGN_LEFT);
-	display.drawStringMaxWidth(0, 0, 128, "WiFi:" + String(bars) + " BT:" + String(level));
+	display.drawStringMaxWidth(0, 0, 128, "WiFi:" + String(bars));
 	display.display();	
+}
+
+void OptionOne() {
+	Serial.println("QCO Setup!");
+	displayClear();
+	WifiStrength ();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 18, "QCO Setup!");
+	display.display();
+	
+	if (loopState==1) {
+		typePhp(3);
+	} else {
+		typePhp(2);
+		loopState=1;
+	}
+	
+	delay(100);
+	Serial.println("PHP query for QCO Setup");
+	buzzerFunction(2);
+	OnNeoPixel();
 }
 
 void OptionTwo() {
@@ -719,6 +640,22 @@ void OptionTwo() {
 	
 	delay(100);
 	Serial.println("PHP query to add QA Defect");
+	buzzerFunction(4);
+	OnNeoPixel();
+}
+
+void OptionThree() {
+	Serial.println("PRD Box done!");
+	displayClear();
+	WifiStrength ();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 18, "PRD Box done!");
+	display.display();
+	
+	typePhp(5);
+	
+	delay(100);
+	Serial.println("PHP query to add PRD Box");
 	buzzerFunction(4);
 	OnNeoPixel();
 }
