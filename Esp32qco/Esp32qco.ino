@@ -37,19 +37,19 @@ int status = WL_IDLE_STATUS;
 String response;
 int statusCode = 0;
 
-//mechanic ID
-//static NotifNo that will be default per device.
-int deviceID = 5;
+//static deviceID that will be default per device.
+int deviceID = 1;
 
 //button
 const int startButton = 12;
 const int cancelButton = 13;
-const int LockButton = 14;
+const int lockButton = 14;
 
 const int LedLight = 16;
 
 int buttonState1 = 1;
 int buttonState2 = 1;
+int buttonState3 = 1;
 
 //ElapsedTime = time elpsed since start
 int ElapsedTime = 0;
@@ -112,11 +112,13 @@ void setup() {
 
 	pinMode(startButton, INPUT_PULLUP);
 	pinMode(cancelButton, INPUT_PULLUP);
+	pinMode(lockButton, INPUT_PULLUP);
 	
 	pinMode(LedLight, OUTPUT);
 
 	attachInterrupt(startButton, startButtonChange, CHANGE);
 	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
+	attachInterrupt(lockButton, lockButtonChange, CHANGE);
 	
 	//buzzer init
 	ledcSetup(channel, freq, resolution);
@@ -164,18 +166,25 @@ void loop() {
 	displayClear();
 	WifiStrength ();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 22, "Getting Tasks\n");
+	display.drawString(64, 22, "Getting Status\n");
 	display.display();
 	
 	//getting tasks
 	
+	if (cellLocation=="") {
+		Serial.println("TypePhp(6): ");
+		typePhp(6);
+	}
+	
+	Serial.print("current cellLocation: ");
+	Serial.println(cellLocation);
 	
 	int typer=1;
 	statusCode = 0;
 	response = "";
-	Serial.println("making POST request");
+	Serial.println("[1]making POST request");
 	//String contentType = "application/x-www-form-urlencoded";
-	String postData = "NotifNo=";
+	String postData = "deviceID=";
 	postData += deviceID;
 	postData += "&typer=";
 	postData += typer;
@@ -191,8 +200,8 @@ void loop() {
 	while ( statusCode != 200) {
 		
 		Serial.print(".");
-		//client.post("/android2/querytask.php", contentType, postData);
-		client.post("/querytask.php", contentType, postData);
+		//client.post("/android2/qcotasker.php", contentType, postData);
+		client.post("/qcotasker.php", contentType, postData);
 		// read the status code and body of the response
 		statusCode = client.responseStatusCode();
 		response = client.responseBody();
@@ -210,7 +219,7 @@ void loop() {
 	//reset status code
 	statusCode = 0;
   
-  if ((response != "")&&(typer == 1)) {
+	if ((response != "")&&(typer == 1)) {
 	  
 		
 		Serial.println();
@@ -227,12 +236,7 @@ void loop() {
 
 		Serial.print("ID: ");
 		Serial.println(taskID);
-		Serial.print("location: ");
-		Serial.println(cellLocation);
-		Serial.print("Status: ");
-		Serial.println(Status);
-		Serial.print("Assignee/EmpNo: ");
-		Serial.println(EmpNo);
+
 		Serial.println();
 		
 		client.stop();
@@ -306,7 +310,7 @@ void loop() {
 					delay(200);
 			
 					if (buttonState1 == HIGH && buttonState2 == LOW){
-						CancelTask();		
+						OptionTwo();		
 					}
 			
 					if (buttonState1 == HIGH){
@@ -365,9 +369,9 @@ void loop() {
 				buttonState2 == HIGH;
 			}
 			if (buttonState1 == HIGH && buttonState2 == LOW){
-				CancelTask();		
+				OptionTwo();		
 			}
-	
+
 			
 			
 			//jomar
@@ -409,7 +413,7 @@ void loop() {
 				OnNeoPixel();
 			}
 
-	
+
 			Serial.print("countToFifteen: ");
 			Serial.println(countToFifteen);
 			countToFifteen++;
@@ -430,17 +434,17 @@ void loop() {
 	  /*
 	  Serial.println("Posting and updating data");
 	  
-	  postData = "NotifNo=";
+	  postData = "deviceID=";
 	  postData += deviceID;
 	  postData += "&typer=2&taskID=";
-	  //postData = "NotifNo=1&typer=2&taskID=";
+	  //postData = "deviceID=1&typer=2&taskID=";
 	  postData += ID;
 	  
 	  Serial.print("postData: ");
 	  Serial.println(postData);
 	  
 	  while ( statusCode != 200) {
-		client.post("/android2/querytask.php", contentType, postData);
+		client.post("/android2/qcotasker.php", contentType, postData);
 		// read the status code and body of the response
 		statusCode = client.responseStatusCode();
 		response = client.responseBody();
@@ -453,23 +457,19 @@ void loop() {
 	  Serial.println("Update 2 successful! ");
 	  Serial.println();*/
 	  
-  } else {
-	  	OnNeoPixel();
+	} else {
+		OnNeoPixel();
 		displayClear();
 		WifiStrength ();
 		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.drawString(64, 22, "No task,\n sleeping for 1min");
-		Serial.println("No task,\n sleeping for 1min");
+		display.drawString(64, 22, "Standby\n Mode");
+		Serial.println("Standby\n Mode");
 		display.display();
-		buzzerFunction(1);
-		displayClear();
-		
-		esp_deep_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-		Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) + " Seconds");
-		esp_deep_sleep_start();
-		//sleep esp8266 for 1mins
-		ESP.restart();
-  }
+		//buzzerFunction(1);
+		if (buttonState1 == HIGH && buttonState2 == LOW){
+			OptionTwo();		
+		}
+	}
   
 	Serial.println("Wait five seconds");
 	delay(5000);
@@ -482,15 +482,18 @@ int typePhp (int typer){
 	
 	statusCode = 0;
 	response = "";
-	Serial.println("making POST request");
-	//String contentType = "application/x-www-form-urlencoded";
-	String postData = "NotifNo=";
+	Serial.println("(typePhp)making POST request");
+	String contentType = "application/x-www-form-urlencoded";
+	String postData = "deviceID=";
 	postData += deviceID;
 	postData += "&typer=";
 	postData += typer;
+	postData += "&loc=";
+	postData += cellLocation;
 	
-	if ((typer==2)||(typer==3)||(typer==4)||(typer==5)||(typer==6)) {
-		Serial.println("Posting and updating data");
+	/*
+	if ((typer==2)||(typer==3)||(typer==4)||(typer==5)) {
+		Serial.println("Posting and/or updating data");
 		postData += "&taskID=";
 		postData += taskID;
 	}
@@ -499,7 +502,7 @@ int typePhp (int typer){
 		Serial.println("For Cancel/Timeout data");
 		postData += "&EmpNo=";
 		postData += EmpNo;
-	}
+	}*/
 
 	Serial.print("postData: ");
 	Serial.println(postData);
@@ -512,8 +515,8 @@ int typePhp (int typer){
 	while ( statusCode != 200) {
 		
 		Serial.print(".");
-		//client.post("/android2/querytask.php", contentType, postData);
-		client.post("/querytask.php", contentType, postData);
+		//client.post("/android2/qcotasker.php", contentType, postData);
+		client.post("/qcotasker.php", contentType, postData);
 		// read the status code and body of the response
 		statusCode = client.responseStatusCode();
 		response = client.responseBody();
@@ -521,7 +524,7 @@ int typePhp (int typer){
 		Serial.println(statusCode);
 		//200 = data sent successfully
 		//-1 =
-		//Response is the data the PHP server sents back
+		//Response is the data the PHP server sends back
 		Serial.print("Response: ");
 		Serial.println(response);
 		delay(100);
@@ -532,41 +535,29 @@ int typePhp (int typer){
 	statusCode = 0;
 	
 
-    if ((typer==2)||(typer==3)||(typer==4)||(typer==5)||(typer==6)) {
+    if ((typer==2)||(typer==3)||(typer==4)||(typer==5)) {
 		Serial.print("Update ");
 		Serial.print(typer);
 		Serial.print(" successful! ");
 		Serial.println();
+
 	}
   
-	if ((response != "")&&(typer == 1)) {
-	  
-		
-		Serial.println();
-		Serial.println("not empty, means task available!");
+	if ((response != "")&&(typer == 6)) {
 
 		//crunch response to get data
 		int firstCommaIndex = response.indexOf(',');
 		int secondCommaIndex = response.indexOf(',', firstCommaIndex+1);
-		String taskID = response.substring(0, firstCommaIndex);
-		String cellLocation = response.substring(firstCommaIndex+1, secondCommaIndex);
-		String Status = response.substring(secondCommaIndex+1);
+		cellLocation = response.substring(0, firstCommaIndex);
 
-		Serial.print("ID: ");
-		Serial.println(taskID);
-		Serial.print("location: ");
+		Serial.print("cellLocation: ");
 		Serial.println(cellLocation);
-		Serial.print("Status: ");
-		Serial.println(Status);
-		Serial.println();
 		
-		client.stop();
-
-		  
-	Serial.println("Wait three seconds");
-	delay(3000);
-	
+		Serial.println();
 	}
+	
+	Serial.println("End typePhp, Wait 2 seconds");
+	delay(2000);
 }
 
 void wifiConnect () {
@@ -626,15 +617,15 @@ int BlinkNeoPixel () {
 }
 
 void startButtonChange() {
-	
 	buttonState1 = 0;
-	
 }
 
 void cancelButtonChange() {
-	
 	buttonState2 = 0;
-	
+}
+
+void lockButtonChange() {
+	buttonState3 = 0;
 }
 
 int displayClear() {
@@ -716,29 +707,20 @@ int WifiStrength () {
 	display.display();	
 }
 
-void CancelTask() {
+void OptionTwo() {
+	Serial.println("QA Defect detected!");
+	displayClear();
+	WifiStrength ();
+	display.setTextAlignment(TEXT_ALIGN_CENTER);
+	display.drawString(64, 18, "QA Defect Found!");
+	display.display();
 	
+	typePhp(4);
 	
-	Serial.println("Checking if I can cancel task");
-	
-	if (cellLocation != "") {
-		displayClear();
-		WifiStrength ();
-		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.drawString(64, 18, "Task cancelled!\nReassigning");
-		display.display();
-		
-		typePhp(5);
-		
-		delay(100);
-		Serial.println("PHP query to cancel task");
-			
-		Serial.print("cancel!! \n");
-		Serial.print("task should auto assign. \n");
-		buzzerFunction(4);
-		OnNeoPixel();
-		ESP.restart();
-	}
+	delay(100);
+	Serial.println("PHP query to add QA Defect");
+	buzzerFunction(4);
+	OnNeoPixel();
 }
 
 void print_wakeup_reason(){
