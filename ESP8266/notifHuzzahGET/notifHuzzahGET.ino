@@ -39,7 +39,7 @@ int statusCode = 0;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 5;
+int mechanicID = 2;
 
 //buzzer
 const int buzzer = 2;
@@ -81,6 +81,11 @@ void setup() {
 	buzzerFunction(3);
 
 	Serial.begin(9600);
+	
+	String wfms = WiFi.macAddress();
+	Serial.print("MAC address : ");
+	Serial.println(wfms);
+	
 	wifiConnect();
 
 	// print the SSID of the network you're attached to:
@@ -92,10 +97,6 @@ void setup() {
 	Serial.print("IP Address: ");
 	Serial.println(ip);
 	ESP.wdtFeed();
-
-	String wfms = WiFi.macAddress();
-	Serial.print("MAC address : ");
-	Serial.println(wfms);
 	
 	// Initialising the UI will init the display too.
 	display.init();
@@ -555,13 +556,15 @@ void wifiConnect () {
 	WiFi.begin(ssid, pass);
 	int ResetCounter = 0;
 	Serial.print("Attempting to connect to Network ");
+	Serial.print("Connecting to ");
+	Serial.println(ssid);
 	while ( WiFi.status() != WL_CONNECTED) {
 		ESP.wdtFeed();
 		Serial.print(".");
 		ResetCounter++;
 		yield();
 		delay(300);
-		if (ResetCounter >= 30) {
+		if (ResetCounter >= 60) {
 			Serial.print("ESP8266 reset!");
 			
 			display.init();
@@ -574,6 +577,8 @@ void wifiConnect () {
 			display.setTextAlignment(TEXT_ALIGN_CENTER);
 			display.drawString(64, 22, "ESP8266 reset!");
 			display.display();
+			delay(500);
+			displayClear();
 			ESP.restart();
 		}
 	}

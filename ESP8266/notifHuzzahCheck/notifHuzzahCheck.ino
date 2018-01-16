@@ -244,7 +244,7 @@ void battery_level() {
   // this means our min analog read value should be 580 (3.14V)
   // and the max analog read value should be 774 (4.2V).
   int level = analogRead(A0);
-  Serial.print("A0 level: ")
+  Serial.print("A0 level: ");
   Serial.print(level);
  
   // convert battery level to percent

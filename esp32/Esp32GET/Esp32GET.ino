@@ -563,8 +563,8 @@ int typePhp (int typer){
 		client.stop();
 
 		  
-	Serial.println("Wait five seconds");
-	delay(5000);
+	Serial.println("Wait three seconds");
+	delay(3000);
 	
 	}
 }
