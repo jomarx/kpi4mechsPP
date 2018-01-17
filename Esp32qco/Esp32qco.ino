@@ -80,6 +80,7 @@ int resolution = 8;
 
 //loop state
 int loopState = 0;
+int firstCheck = 0;
 
 void setup() {
 	
@@ -88,7 +89,7 @@ void setup() {
 
 	WiFi.mode(WIFI_STA);
 
-	buzzerFunction(3);
+	buzzerFunction(1);
 
 	Serial.begin(115200);
 	wifiConnect();
@@ -165,15 +166,17 @@ void loop() {
 	buttonState1 = 1;
 	buttonState2 = 1;
 	
+	int typer=0;
+	
 	delayer(2);
 	displayClear();
 	WifiStrength ();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 22, "Getting Status\n");
+	display.drawString(64, 22, "Standby\n Mode");
+	Serial.println("Standby\n Mode");
 	display.display();
 	
 	//getting tasks
-	
 	//check location variable, if empty, get from PHP
 	if (cellLocation=="") {
 		Serial.println("TypePhp(6): ");
@@ -183,41 +186,52 @@ void loop() {
 	Serial.print("current cellLocation: ");
 	Serial.println(cellLocation);
 	
-	int typer=1;
-	statusCode = 0;
-	response = "";
-	Serial.println("[1]making POST request");
-	//String contentType = "application/x-www-form-urlencoded";
-	String postData = "deviceID=";
-	postData += deviceID;
-	postData += "&typer=";
-	postData += typer;
-
-	Serial.print("postData: ");
-	Serial.println(postData);
-
-	Serial.println();
-	Serial.println("Start sending loop");
-	
-	
-	while ( statusCode != 200) {
+	if (firstCheck==0) {
 		
-		Serial.print(".");
-		//client.post("/android2/qcotasker.php", contentType, postData);
-		client.post("/qcotasker.php", contentType, postData);
-		// read the status code and body of the response
-		statusCode = client.responseStatusCode();
-		response = client.responseBody();
-		Serial.print("Status code: ");
-		Serial.println(statusCode);
-		//200 = data sent successfully
-		//-1 =
-		//Response is the data the PHP server sents back
-		Serial.print("Response: ");
-		Serial.println(response);
-		delay(100);
-		//disconnect client
-		client.stop();
+		delayer(2);
+		displayClear();
+		WifiStrength ();
+		display.setTextAlignment(TEXT_ALIGN_CENTER);
+		display.drawString(64, 22, "Getting Status\n");
+		display.display();
+
+		typer=1;
+		statusCode = 0;
+		response = "";
+		Serial.println("[1]making POST request");
+		//String contentType = "application/x-www-form-urlencoded";
+		String postData = "deviceID=";
+		postData += deviceID;
+		postData += "&typer=";
+		postData += typer;
+
+		Serial.print("postData: ");
+		Serial.println(postData);
+
+		Serial.println();
+		Serial.println("Start sending loop");
+		
+		
+		while ( statusCode != 200) {
+			
+			Serial.print(".");
+			//client.post("/android2/qcotasker.php", contentType, postData);
+			client.post("/qcotasker.php", contentType, postData);
+			// read the status code and body of the response
+			statusCode = client.responseStatusCode();
+			response = client.responseBody();
+			Serial.print("Status code: ");
+			Serial.println(statusCode);
+			//200 = data sent successfully
+			//-1 =
+			//Response is the data the PHP server sents back
+			Serial.print("Response: ");
+			Serial.println(response);
+			delay(100);
+			//disconnect client
+			client.stop();
+		}
+	firstCheck=1;
 	}
 	//reset status code
 	statusCode = 0;
@@ -227,6 +241,8 @@ void loop() {
 		
 		Serial.println();
 		Serial.println("not empty, means task available!");
+		
+		loopState=1;
 
 		//crunch response to get data
 		int firstCommaIndex = response.indexOf(',');
@@ -292,24 +308,20 @@ void loop() {
 				buttonState3 = HIGH;
 			}
 
-			
 			//jomar
-			/*
-			if (countToMinute > 1200 && TNLeaveLoop < 1){
+			if (countToMinute > 50 && TNLeaveLoop < 1){
 				displayClear();
 
 				display.setTextAlignment(TEXT_ALIGN_LEFT);
 				//get WIFI strength data
 				WifiStrength ();
-				display.drawString(0, 15, "Sew Line # " + String(cellLocation));
-				display.drawString(0, 30, "ACK Time left :" + String(MinLeft));
-				display.drawString(0, 45, "START         END");
+				
+				display.setTextAlignment(TEXT_ALIGN_CENTER);
+				display.drawString(64, 22, "QCO Setup \n Ongoing");
 				display.display();
 				MinLeft--;
 				countToMinute = 0;
-				//Serial.print("function to update DB, timeout");
-				buzzerFunction(5);
-			}*/
+			}
 
 			Serial.print("countToFifteen: ");
 			Serial.println(countToFifteen);
@@ -380,8 +392,9 @@ int typePhp (int typer){
 		display.drawString(64, 18, "Selecting\n Task");
 	} else if (typer==2) {
 		display.drawString(64, 18, "Inserting\n New Task");
+		firstCheck=0;
 	} else if (typer==3) {
-		display.drawString(64, 18, "Ending\n Prev Task");
+		display.drawString(64, 18, "Ending\n Current Task");
 	} else if (typer==4) {
 		display.drawString(64, 18, "Recording\n QA Defect");
 	} else if (typer==5) {
@@ -468,9 +481,8 @@ int typePhp (int typer){
 		
 		Serial.println();
 	}
-	
-	Serial.println("End typePhp, Wait 2 seconds");
-	delay(2000);
+	//Serial.println("End typePhp, Wait 2 seconds");
+	//delay(2000);
 }
 
 void wifiConnect () {
@@ -617,6 +629,7 @@ void OptionOne() {
 	
 	if (loopState==1) {
 		typePhp(3);
+		loopState=0;
 	} else {
 		typePhp(2);
 		loopState=1;
@@ -640,7 +653,7 @@ void OptionTwo() {
 	
 	delay(100);
 	Serial.println("PHP query to add QA Defect");
-	buzzerFunction(4);
+	buzzerFunction(2);
 	OnNeoPixel();
 }
 
@@ -656,7 +669,7 @@ void OptionThree() {
 	
 	delay(100);
 	Serial.println("PHP query to add PRD Box");
-	buzzerFunction(4);
+	buzzerFunction(2);
 	OnNeoPixel();
 }
 
