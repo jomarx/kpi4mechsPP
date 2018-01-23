@@ -77,6 +77,7 @@ RTC_DATA_ATTR int bootCount = 0;
 int freq = 2000;
 int channel = 0;
 int resolution = 8;
+int buzzerPin = 4;
 
 void setup() {
 	
@@ -120,7 +121,7 @@ void setup() {
 	
 	//buzzer init
 	ledcSetup(channel, freq, resolution);
-	ledcAttachPin(4, channel);
+	ledcAttachPin(buzzerPin, channel);
 	
 	displayClear();
 
