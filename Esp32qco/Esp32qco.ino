@@ -17,12 +17,17 @@
 #include "config.h"
 #include <Wire.h>
 
-#include "SSD1306.h" 
+//#include <LiquidCrystal_I2C.h>
+#include "LiquidCrystal.h"
+LiquidCrystal lcd(0);
+//LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+//#include "SSD1306.h" 
 // alias for `#include "SSD1306Wire.h"`
 // Initialize the OLED display using brzo_i2c
 // D3 -> SDA
 // D5 -> SCL
-SSD1306 display(0x3c, 21, 22);
+//SSD1306 display(0x3c, 21, 22);
 // or
 // SH1106Brzo  display(0x3c, D3, D5);
 
@@ -77,6 +82,7 @@ RTC_DATA_ATTR int bootCount = 0;
 int freq = 2000;
 int channel = 0;
 int resolution = 8;
+int buzzerPin = 2;
 
 //loop state
 int loopState = 0;
@@ -93,6 +99,10 @@ void setup() {
 
 	Serial.begin(115200);
 	wifiConnect();
+	
+	lcd.begin(16, 2); //crowtail LCD
+	lcd.setBacklight(HIGH); //crowtail LCD
+	lcd.setCursor(0,0);
 
 	// print the SSID of the network you're attached to:
 	Serial.print("SSID: ");
@@ -108,12 +118,6 @@ void setup() {
 	Serial.print("MAC address : ");
 	Serial.println(wfms);
 	
-	// Initialising the UI will init the display too.
-	display.init();
-
-	display.flipScreenVertically();
-	display.setFont(ArialMT_Plain_16);
-
 	pinMode(startButton, INPUT_PULLUP);
 	pinMode(cancelButton, INPUT_PULLUP);
 	pinMode(lockButton, INPUT_PULLUP);
@@ -126,27 +130,27 @@ void setup() {
 	
 	//buzzer init
 	ledcSetup(channel, freq, resolution);
-	ledcAttachPin(4, channel);
+	ledcAttachPin(buzzerPin, channel);
 	
-	displayClear();
+	ClearLCD();
 
 	WifiStrength ();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 22, "Device ID :\n" + String(deviceID));
-	display.display();
+	lcd.setCursor(0,0);
+	lcd.print("Device ID :");
+	lcd.setCursor(0,1);
+	lcd.print(deviceID);
 	
 	Serial.println("WiFi connected");
 	Serial.println("IP address: ");
 	Serial.println(WiFi.localIP());
-	
-	delayer(3);
 
-	displayClear();
+	ClearLCD();
 	WifiStrength ();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 22, "WIFI: Connected" );
-	display.print("\n");
-	display.display();
+	ClearLCD();
+	lcd.setCursor(0,0);
+	lcd.print("WiFi connected");
+	lcd.setCursor(0,1);
+	lcd.print(WiFi.localIP());
 	
 
 }
@@ -169,12 +173,11 @@ void loop() {
 	int typer=0;
 	
 	delayer(2);
-	displayClear();
-	WifiStrength ();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 22, "Standby\n Mode");
+	ClearLCD();
+	WifiStrength();
+	lcd.setCursor(0,1);
+	lcd.print("Standby Mode");
 	Serial.println("Standby\n Mode");
-	display.display();
 	
 	//getting tasks
 	//check location variable, if empty, get from PHP
@@ -189,11 +192,10 @@ void loop() {
 	if (firstCheck==0) {
 		
 		delayer(2);
-		displayClear();
+		ClearLCD();
 		WifiStrength ();
-		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.drawString(64, 22, "Getting Status\n");
-		display.display();
+		lcd.setCursor(0,1);
+		lcd.print("Getting Status");
 
 		typer=1;
 		statusCode = 0;
@@ -249,9 +251,6 @@ void loop() {
 		int secondCommaIndex = response.indexOf(',', firstCommaIndex+1);
 		int thirdCommaIndex = response.indexOf(',', secondCommaIndex+1);
 		taskID = response.substring(0, firstCommaIndex);
-		cellLocation = response.substring(firstCommaIndex+1, secondCommaIndex);
-		Status = response.substring(secondCommaIndex+1, thirdCommaIndex);
-		EmpNo = response.substring(thirdCommaIndex+1);
 
 		Serial.print("ID: ");
 		Serial.println(taskID);
@@ -272,14 +271,12 @@ void loop() {
 		digitalWrite(LedLight, HIGH);   // turn the LED on (HIGH is the voltage level)
 		delay(10);
 
-		displayClear();
+		ClearLCD();
 		
 		//get WIFI strength data
 		WifiStrength ();
-		
-		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.drawString(64, 22, "QCO Setup \n Started");
-		display.display();
+		lcd.setCursor(0,1);
+		lcd.print("QCOSetup Started");
 
 		buzzerFunction(2);
 		
@@ -295,12 +292,12 @@ void loop() {
 			if (buttonState1 == LOW) {
 				OptionOne();
 				buttonState1 = HIGH;
-				TNLeaveLoop=2;
 				
 			}
 			if (buttonState2 == LOW){
 				OptionTwo();
-				buttonState2 = HIGH;				
+				buttonState2 = HIGH;	
+				TNLeaveLoop=2;
 			}
 			
 			if (buttonState3 == LOW){
@@ -310,15 +307,13 @@ void loop() {
 
 			//jomar
 			if (countToMinute > 50 && TNLeaveLoop < 1){
-				displayClear();
+				ClearLCD();
 
-				display.setTextAlignment(TEXT_ALIGN_LEFT);
 				//get WIFI strength data
 				WifiStrength ();
+				lcd.setCursor(0,1);
+				lcd.print("QCOSetup Ongoing");
 				
-				display.setTextAlignment(TEXT_ALIGN_CENTER);
-				display.drawString(64, 22, "QCO Setup \n Ongoing");
-				display.display();
 				MinLeft--;
 				countToMinute = 0;
 			}
@@ -329,36 +324,26 @@ void loop() {
 			countToMinute++;
 			countToSec++;
 			delay(50);
-			
-			if (buttonState2 == LOW){
-				OptionTwo();
-				buttonState2 = HIGH;				
-			}
-			
-			if (buttonState3 == LOW){
-				OptionThree();	
-				buttonState3 = HIGH;
-			}
-			
-		
+
 		}
 		
 		Serial.println("out of loop");
-		//displayClear();
+		//ClearLCD();
 			
 		//reset button state
 		buttonState1 = 1;
 		buttonState2 = 1;
+		buttonState3 = 1;
 	
 	//if no current task found
 	} else {
 		OnNeoPixel();
-		displayClear();
+		ClearLCD();
 		WifiStrength ();
-		display.setTextAlignment(TEXT_ALIGN_CENTER);
-		display.drawString(64, 22, "Standby\n Mode");
+		lcd.setCursor(0,1);
+		lcd.print("Standby Mode");
 		Serial.println("Standby\n Mode");
-		display.display();
+		
 		//buzzerFunction(1);
 		if (buttonState1 == LOW){
 			OptionOne();
@@ -384,27 +369,30 @@ void loop() {
 
 int typePhp (int typer){
 	
-	displayClear();
+	ClearLCD();
 	WifiStrength ();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
 	
 	if (typer==1) {
-		display.drawString(64, 18, "Selecting\n Task");
+		lcd.setCursor(0,1);
+		lcd.print("Selecting Task");
 	} else if (typer==2) {
-		display.drawString(64, 18, "Inserting\n New Task");
+		lcd.setCursor(0,1);
+		lcd.print("Insert Task");
 		firstCheck=0;
 	} else if (typer==3) {
-		display.drawString(64, 18, "Ending\n Current Task");
+		lcd.setCursor(0,1);
+		lcd.print("Ending C.Task");
 	} else if (typer==4) {
-		display.drawString(64, 18, "Recording\n QA Defect");
+		lcd.setCursor(0,1);
+		lcd.print("Record QA Defect");
 	} else if (typer==5) {
-		display.drawString(64, 18, "Recording\n PRD Box Done");
-	} else if (typer==2) {
-		display.drawString(64, 18, "Get Device\n Location");
+		lcd.setCursor(0,1);
+		lcd.print("Record PRB Dn");
+	} else if (typer==7) {
+		lcd.setCursor(0,1);
+		lcd.print("Incrmnt Outpt");
 	}
-	
-	display.display();
-		
+
 	statusCode = 0;
 	response = "";
 	Serial.print("[typePhp] making POST request for: ");
@@ -497,18 +485,12 @@ void wifiConnect () {
 		
 		delay(300);
 		if (ResetCounter >= 30) {
-			Serial.print("ESP8266 reset!");
+			Serial.print("ESP32 reset!");
 			
-			display.init();
-
-			display.flipScreenVertically();
-			display.setFont(ArialMT_Plain_16);
-			
-			displayClear();
+			ClearLCD();
 			WifiStrength ();
-			display.setTextAlignment(TEXT_ALIGN_CENTER);
-			display.drawString(64, 22, "ESP8266 reset!");
-			display.display();
+			lcd.setCursor(0,1);
+			lcd.print("ESP32 reset!");
 			ESP.restart();
 		}
 	}
@@ -553,10 +535,9 @@ void lockButtonChange() {
 	buttonState3 = 0;
 }
 
-int displayClear() {
-display.clear();
-display.setTextAlignment(TEXT_ALIGN_LEFT);
-display.display();
+int ClearLCD() {
+	lcd.clear();
+	lcd.setCursor(0,0);
 }
 
 int buzzerFunction(int counter){
@@ -614,18 +595,33 @@ int WifiStrength () {
 	}
 
 	// prints WIFI / Battery on screen	
-	display.setTextAlignment(TEXT_ALIGN_LEFT);
-	display.drawStringMaxWidth(0, 0, 128, "WiFi:" + String(bars));
-	display.display();	
+	lcd.setCursor(0,0);
+	lcd.print("WiFi : ");
+	lcd.setCursor(7,0);
+	lcd.print(bars);
 }
 
 void OptionOne() {
-	Serial.println("QCO Setup!");
-	displayClear();
+	Serial.println("Increment One output!");
+	ClearLCD();
 	WifiStrength ();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 18, "QCO Setup!");
-	display.display();
+	lcd.setCursor(0,1);
+	lcd.print(" QA Incrmnt");	
+	
+	typePhp(7);
+	
+	delay(100);
+	Serial.println("PHP query to add Increment Box");
+	buzzerFunction(2);
+	OnNeoPixel();
+}
+
+void OptionTwo() {
+	Serial.println("QCO Setup!");
+	ClearLCD();
+	WifiStrength ();
+	lcd.setCursor(0,1);
+	lcd.print("QCO Setup!");
 	
 	if (loopState==1) {
 		typePhp(3);
@@ -641,13 +637,12 @@ void OptionOne() {
 	OnNeoPixel();
 }
 
-void OptionTwo() {
+void OptionThree() {
 	Serial.println("QA Defect detected!");
-	displayClear();
+	ClearLCD();
 	WifiStrength ();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 18, "QA Defect Found!");
-	display.display();
+	lcd.setCursor(0,1);
+	lcd.print("QA Defect Found");	
 	
 	typePhp(4);
 	
@@ -657,13 +652,12 @@ void OptionTwo() {
 	OnNeoPixel();
 }
 
-void OptionThree() {
+void OptionFour() {
 	Serial.println("PRD Box done!");
-	displayClear();
+	ClearLCD();
 	WifiStrength ();
-	display.setTextAlignment(TEXT_ALIGN_CENTER);
-	display.drawString(64, 18, "PRD Box done!");
-	display.display();
+	lcd.setCursor(0,1);
+	lcd.print("PRD Box done");
 	
 	typePhp(5);
 	
