@@ -134,7 +134,7 @@ void setup() {
 	Serial.println("IP address: ");
 	Serial.println(WiFi.localIP());
 	
-	delayer(3);
+	//delayer(3);
 
 	displayClear();
 	WifiStrength ();
@@ -161,7 +161,7 @@ void loop() {
 	buttonState1 = 1;
 	buttonState2 = 1;
 	
-	delayer(2);
+	//delayer(2);
 	displayClear();
 	WifiStrength ();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
@@ -472,8 +472,8 @@ void loop() {
 		ESP.restart();
   }
   
-	Serial.println("Wait five seconds");
-	delay(5000);
+	Serial.println("Wait 2 seconds");
+	delayer(2);
 	
 	
 }
@@ -564,8 +564,8 @@ int typePhp (int typer){
 		client.stop();
 
 		  
-	Serial.println("Wait three seconds");
-	delay(3000);
+	Serial.println("Wait 2 seconds");
+	delayer(2);
 	
 	}
 }
