@@ -46,15 +46,23 @@ int statusCode = 0;
 int deviceID = 1;
 
 //button
-const int startButton = 12;
-const int cancelButton = 13;
+const int incButton = 12;
+const int qcossButton = 13;
 const int lockButton = 14;
+const int voidButton = 17;
+const int blankButton = 18;
+
+const int shiftSwitch = 15;
 
 const int LedLight = 16;
 
-int buttonState1 = 1;
-int buttonState2 = 1;
-int buttonState3 = 1;
+int buttonState1 = 1; //incButton
+int buttonState2 = 1; //qcossButton
+int buttonState3 = 1; //lockButton
+int buttonState4 = 1; //blankButton
+int buttonState5 = 1; //voidButton
+
+int swState1 = 1;
 
 //ElapsedTime = time elpsed since start
 int ElapsedTime = 0;
@@ -118,15 +126,18 @@ void setup() {
 	Serial.print("MAC address : ");
 	Serial.println(wfms);
 	
-	pinMode(startButton, INPUT_PULLUP);
-	pinMode(cancelButton, INPUT_PULLUP);
+	pinMode(incButton, INPUT_PULLUP);
+	pinMode(qcossButton, INPUT_PULLUP);
 	pinMode(lockButton, INPUT_PULLUP);
+	pinMode(voidButton, INPUT_PULLUP);
+	pinMode(shiftSwitch, INPUT_PULLUP);
 	
 	pinMode(LedLight, OUTPUT);
 
-	attachInterrupt(startButton, startButtonChange, CHANGE);
-	attachInterrupt(cancelButton, cancelButtonChange, CHANGE);
+	attachInterrupt(incButton, incButtonChange, CHANGE);
+	attachInterrupt(qcossButton, qcossButtonChange, CHANGE);
 	attachInterrupt(lockButton, lockButtonChange, CHANGE);
+	attachInterrupt(voidButton, voidButtonChange, CHANGE);
 	
 	//buzzer init
 	ledcSetup(channel, freq, resolution);
@@ -169,6 +180,8 @@ void loop() {
 	//reset button values	
 	buttonState1 = 1;
 	buttonState2 = 1;
+	
+	OffNeoPixel();
 	
 	int typer=0;
 	
@@ -304,6 +317,13 @@ void loop() {
 				OptionThree();	
 				buttonState3 = HIGH;
 			}
+			
+			if (buttonState5 == LOW){
+				OptionFive();	
+				buttonState5 = HIGH;
+				loopState=0;
+				TNLeaveLoop=2;
+			}
 
 			//jomar
 			if (countToMinute > 50 && TNLeaveLoop < 1){
@@ -334,6 +354,8 @@ void loop() {
 		buttonState1 = 1;
 		buttonState2 = 1;
 		buttonState3 = 1;
+		buttonState4 = 1;
+		buttonState5 = 1;
 	
 	//if no current task found
 	} else {
@@ -388,6 +410,9 @@ int typePhp (int typer){
 	} else if (typer==5) {
 		lcd.setCursor(0,1);
 		lcd.print("Record PRB Dn");
+	} else if (typer==6) {
+		lcd.setCursor(0,1);
+		lcd.print("Check LOC");
 	} else if (typer==7) {
 		lcd.setCursor(0,1);
 		lcd.print("Incrmnt Outpt");
@@ -473,7 +498,7 @@ int typePhp (int typer){
 	//delay(2000);
 }
 
-void wifiConnect () {
+void wifiConnect() {
 	// Connect to WPA/WPA2 network:
 	WiFi.begin(ssid, pass);
 	int ResetCounter = 0;
@@ -523,16 +548,20 @@ int BlinkNeoPixel () {
 	
 }
 
-void startButtonChange() {
+void incButtonChange() {
 	buttonState1 = 0;
 }
 
-void cancelButtonChange() {
+void qcossButtonChange() {
 	buttonState2 = 0;
 }
 
 void lockButtonChange() {
 	buttonState3 = 0;
+}
+
+void voidButtonChange() {
+	buttonState5 = 0;
 }
 
 int ClearLCD() {
@@ -596,9 +625,13 @@ int WifiStrength () {
 
 	// prints WIFI / Battery on screen	
 	lcd.setCursor(0,0);
-	lcd.print("WiFi : ");
-	lcd.setCursor(7,0);
+	lcd.print("WiFi: ");
+	lcd.setCursor(6,0);
 	lcd.print(bars);
+	lcd.setCursor(10,0);
+	lcd.print("LC: ");
+	lcd.setCursor(13,0);
+	lcd.print(cellLocation);
 }
 
 void OptionOne() {
@@ -667,13 +700,27 @@ void OptionFour() {
 	OnNeoPixel();
 }
 
+void OptionFive() {
+	Serial.println("Task Void!");
+	ClearLCD();
+	WifiStrength ();
+	lcd.setCursor(0,1);
+	lcd.print("Task Voided");
+	
+	typePhp(8);
+	
+	delay(100);
+	Serial.println("PHP query to void");
+	buzzerFunction(2);
+	OnNeoPixel();
+}
+
 void print_wakeup_reason(){
   esp_deep_sleep_wakeup_cause_t wakeup_reason;
 
   wakeup_reason = esp_deep_sleep_get_wakeup_cause();
 
-  switch(wakeup_reason)
-  {
+  switch(wakeup_reason) {
     case 1  : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
     case 2  : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
     case 3  : Serial.println("Wakeup caused by timer"); break;
