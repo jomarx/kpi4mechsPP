@@ -16,21 +16,36 @@
 #include <WiFi.h>
 #include "config.h"
 #include <Wire.h>
+#include <Keypad.h>
 
-//#include <LiquidCrystal_I2C.h>
-#include "LiquidCrystal.h"
-LiquidCrystal lcd(0);
-//LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
+#include <LiquidCrystal_I2C.h>
+//https://www.elecrow.com/wiki/index.php?title=Crowtail-_I2C_LCD
 
-//#include "SSD1306.h" 
-// alias for `#include "SSD1306Wire.h"`
-// Initialize the OLED display using brzo_i2c
-// D3 -> SDA
-// D5 -> SCL
-//SSD1306 display(0x3c, 21, 22);
-// or
-// SH1106Brzo  display(0x3c, D3, D5);
+//#include "LiquidCrystal.h"
+//LiquidCrystal lcd(0);
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
+//membrane keyboard settings
+#define Input_Length 2 
+char Data[Input_Length]; 
+char Master[Input_Length] = "1"; 
+byte data_count = 0, master_count = 0;
+bool Pass_is_good;
+char customKey;
+const byte ROWS = 4;
+const byte COLS = 3;
+
+char hexaKeys[ROWS][COLS] = {
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
+
+byte rowPins[ROWS] = {5, 17, 16, 4};
+byte colPins[COLS] = {0, 2, 15};
+
+Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 char serverAddress[] = "192.168.143.220";  // server address
 //char serverAddress[] = "10.37.10.149";  // server address
@@ -47,20 +62,10 @@ int deviceID = 1;
 
 //button
 const int incButton = 12;
-const int qcossButton = 13;
-const int lockButton = 14;
-const int voidButton = 17;
-const int blankButton = 18;
 
-const int shiftSwitch = 15;
-
-const int LedLight = 16;
+const int LedLight = 13;
 
 int buttonState1 = 1; //incButton
-int buttonState2 = 1; //qcossButton
-int buttonState3 = 1; //lockButton
-int buttonState4 = 1; //blankButton
-int buttonState5 = 1; //voidButton
 
 int swState1 = 1;
 
@@ -90,11 +95,12 @@ RTC_DATA_ATTR int bootCount = 0;
 int freq = 2000;
 int channel = 0;
 int resolution = 8;
-int buzzerPin = 2;
+int buzzerPin = 14;
 
 //loop state
 int loopState = 0;
 int firstCheck = 0;
+int TNLeaveLoop = 0;
 
 void setup() {
 	
@@ -108,9 +114,11 @@ void setup() {
 	Serial.begin(115200);
 	wifiConnect();
 	
-	lcd.begin(16, 2); //crowtail LCD
-	lcd.setBacklight(HIGH); //crowtail LCD
-	lcd.setCursor(0,0);
+	//lcd.begin(16, 2); //crowtail LCD
+	//lcd.setBacklight(HIGH); //crowtail LCD
+	//lcd.setCursor(0,0);
+	lcd.init(); 
+	lcd.backlight();
 
 	// print the SSID of the network you're attached to:
 	Serial.print("SSID: ");
@@ -120,24 +128,16 @@ void setup() {
 	IPAddress ip = WiFi.localIP();
 	Serial.print("IP Address: ");
 	Serial.println(ip);
-	
 
 	String wfms = WiFi.macAddress();
 	Serial.print("MAC address : ");
 	Serial.println(wfms);
 	
 	pinMode(incButton, INPUT_PULLUP);
-	pinMode(qcossButton, INPUT_PULLUP);
-	pinMode(lockButton, INPUT_PULLUP);
-	pinMode(voidButton, INPUT_PULLUP);
-	pinMode(shiftSwitch, INPUT_PULLUP);
 	
 	pinMode(LedLight, OUTPUT);
 
 	attachInterrupt(incButton, incButtonChange, CHANGE);
-	attachInterrupt(qcossButton, qcossButtonChange, CHANGE);
-	attachInterrupt(lockButton, lockButtonChange, CHANGE);
-	attachInterrupt(voidButton, voidButtonChange, CHANGE);
 	
 	//buzzer init
 	ledcSetup(channel, freq, resolution);
@@ -179,7 +179,6 @@ void loop() {
 	
 	//reset button values	
 	buttonState1 = 1;
-	buttonState2 = 1;
 	
 	OffNeoPixel();
 	
@@ -274,7 +273,7 @@ void loop() {
 
 		//task found starting
 	  
-		int TNLeaveLoop = 0;
+		TNLeaveLoop = 0;
 		int countToFifteen = 0;
 		long countToFifteenAgain = 0;
 		int countToMinute = 0;
@@ -303,29 +302,18 @@ void loop() {
 			}
 				
 			if (buttonState1 == LOW) {
-				OptionOne();
+				checkButtonContents();
+				//OptionOne();
 				buttonState1 = HIGH;
 				
 			}
+			/*
 			if (buttonState2 == LOW){
 				OptionTwo();
 				buttonState2 = HIGH;	
 				TNLeaveLoop=2;
-			}
-			
-			if (buttonState3 == LOW){
-				OptionThree();	
-				buttonState3 = HIGH;
-			}
-			
-			if (buttonState5 == LOW){
-				OptionFive();	
-				buttonState5 = HIGH;
-				loopState=0;
-				TNLeaveLoop=2;
-			}
+			}*/
 
-			//jomar
 			if (countToMinute > 50 && TNLeaveLoop < 1){
 				ClearLCD();
 
@@ -352,10 +340,6 @@ void loop() {
 			
 		//reset button state
 		buttonState1 = 1;
-		buttonState2 = 1;
-		buttonState3 = 1;
-		buttonState4 = 1;
-		buttonState5 = 1;
 	
 	//if no current task found
 	} else {
@@ -367,6 +351,7 @@ void loop() {
 		Serial.println("Standby\n Mode");
 		
 		//buzzerFunction(1);
+		/*
 		if (buttonState1 == LOW){
 			OptionOne();
 			buttonState1 = HIGH;				
@@ -380,7 +365,15 @@ void loop() {
 		if (buttonState3 == LOW){
 			OptionThree();	
 			buttonState3 = HIGH;
+		}*/
+		
+		if (buttonState1 == LOW) {
+			checkButtonContents();
+			//OptionOne();
+			buttonState1 = HIGH;
+			
 		}
+		
 	}
   
 	Serial.println("Wait One seconds");
@@ -552,17 +545,6 @@ void incButtonChange() {
 	buttonState1 = 0;
 }
 
-void qcossButtonChange() {
-	buttonState2 = 0;
-}
-
-void lockButtonChange() {
-	buttonState3 = 0;
-}
-
-void voidButtonChange() {
-	buttonState5 = 0;
-}
 
 int ClearLCD() {
 	lcd.clear();
@@ -728,4 +710,40 @@ void print_wakeup_reason(){
     case 5  : Serial.println("Wakeup caused by ULP program"); break;
     default : Serial.println("Wakeup was not caused by deep sleep"); break;
   }
+}
+
+void checkButtonContents() {
+	//
+	ClearLCD();
+	lcd.setCursor(0,0);
+	lcd.print("Input Choice: ");
+
+	lcd.setCursor(0,1);
+	int xx=0;
+	while (xx==0) {
+		customKey = customKeypad.getKey();
+		if (customKey){
+			Data[data_count] = customKey; 
+			Serial.print(customKey);
+			lcd.setCursor(data_count,1); 
+			lcd.print(Data[data_count]); 
+			delayer(2);
+			
+			if(!strcmp(Data, "1")){
+				//
+				Serial.println("OptionOne");
+				OptionOne();
+				xx=1;
+			}
+
+			if(!strcmp(Data, "2")){
+				//
+				Serial.println("OptionTwos");
+				OptionTwo();
+				TNLeaveLoop=2;
+				xx=1;
+			}
+			//
+		}
+	}
 }
