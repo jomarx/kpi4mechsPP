@@ -102,6 +102,10 @@ int loopState = 0;
 int firstCheck = 0;
 int TNLeaveLoop = 0;
 
+//wifi strength details
+int bars = 0;
+int oldBars = 0;
+
 void setup() {
 	
 	//watchdog timer
@@ -147,29 +151,28 @@ void setup() {
 
 	WifiStrength ();
 	lcd.setCursor(0,0);
-	lcd.print("Device ID :");
+	lcd.print("Device ID: ");
 	lcd.setCursor(0,1);
 	lcd.print(deviceID);
+	delayer(1);
 	
 	Serial.println("WiFi connected");
 	Serial.println("IP address: ");
 	Serial.println(WiFi.localIP());
 
 	ClearLCD();
-	WifiStrength ();
-	ClearLCD();
 	lcd.setCursor(0,0);
 	lcd.print("WiFi connected");
 	lcd.setCursor(0,1);
 	lcd.print(WiFi.localIP());
-	
+	delayer(1);
 
 }
 
 void loop() {
 	
 	//Increment boot number and print it every reboot
-	++bootCount;
+	//++bootCount;
 	Serial.println("Boot number: " + String(bootCount));
 	
 	print_wakeup_reason();
@@ -178,17 +181,18 @@ void loop() {
 	Serial.println("Start Main loop");	
 	
 	//reset button values	
-	buttonState1 = 1;
+	//buttonState1 = 1;
 	
 	OffNeoPixel();
 	
 	int typer=0;
 	
-	delayer(2);
-	ClearLCD();
+	//delayer(2);
+	//ClearLCD();
 	WifiStrength();
+	
 	lcd.setCursor(0,1);
-	lcd.print("Standby Mode");
+	lcd.print("Standby Mode  ");
 	Serial.println("Standby\n Mode");
 	
 	//getting tasks
@@ -203,7 +207,7 @@ void loop() {
 	
 	if (firstCheck==0) {
 		
-		delayer(2);
+		//delayer(2);
 		ClearLCD();
 		WifiStrength ();
 		lcd.setCursor(0,1);
@@ -274,9 +278,9 @@ void loop() {
 		//task found starting
 	  
 		TNLeaveLoop = 0;
-		int countToFifteen = 0;
-		long countToFifteenAgain = 0;
-		int countToMinute = 0;
+		int countToFive = 0;
+		int countToOne = 0;
+		long countToFiveAgain = 0;
 		int MinLeft = 15;
 		
 		//set LED to ON
@@ -292,7 +296,7 @@ void loop() {
 
 		buzzerFunction(2);
 		
-		delayer(1);
+		//delayer(1);
 		
 		while (TNLeaveLoop < 1) {
 			
@@ -314,22 +318,30 @@ void loop() {
 				TNLeaveLoop=2;
 			}*/
 
-			if (countToMinute > 50 && TNLeaveLoop < 1){
+			if (countToOne > 240 && TNLeaveLoop < 1){
 				ClearLCD();
 
 				//get WIFI strength data
 				WifiStrength ();
 				lcd.setCursor(0,1);
 				lcd.print("QCOSetup Ongoing");
-				
-				MinLeft--;
-				countToMinute = 0;
+				countToOne = 0;
+			}
+			
+			if (countToFive > 2400 && TNLeaveLoop < 1){
+				//beep every 5mins
+				buzzerFunction(1);
+				countToFive = 0;
 			}
 
-			Serial.print("countToFifteen: ");
-			Serial.println(countToFifteen);
-			countToFifteen++;
-			countToMinute++;
+			Serial.print("countToFive: ");
+			Serial.print(countToFive);
+			Serial.print(" countToOne: ");
+			Serial.print(countToOne);
+			Serial.print("  TNLeaveLoop: ");
+			Serial.println(TNLeaveLoop);
+			countToFive++;
+			countToOne++;
 			countToSec++;
 			delay(50);
 
@@ -344,39 +356,21 @@ void loop() {
 	//if no current task found
 	} else {
 		OnNeoPixel();
-		ClearLCD();
+		//ClearLCD();
 		WifiStrength ();
 		lcd.setCursor(0,1);
-		lcd.print("Standby Mode");
-		Serial.println("Standby\n Mode");
-		
-		//buzzerFunction(1);
-		/*
-		if (buttonState1 == LOW){
-			OptionOne();
-			buttonState1 = HIGH;				
-		}
-		
-		if (buttonState2 == LOW){
-			OptionTwo();
-			buttonState2 = HIGH;				
-		}
-		
-		if (buttonState3 == LOW){
-			OptionThree();	
-			buttonState3 = HIGH;
-		}*/
+		lcd.print("Standby Mode  ");
+		Serial.println("Standby Mode");
 		
 		if (buttonState1 == LOW) {
 			checkButtonContents();
 			//OptionOne();
 			buttonState1 = HIGH;
-			
 		}
 		
 	}
   
-	Serial.println("Wait One seconds");
+	Serial.println("End of Void Loop");
 	delay(1000);
 	
 	
@@ -409,7 +403,11 @@ int typePhp (int typer){
 	} else if (typer==7) {
 		lcd.setCursor(0,1);
 		lcd.print("Incrmnt Outpt");
+	} else if (typer==8) {
+		lcd.setCursor(0,1);
+		lcd.print("Task Voided");
 	}
+	
 
 	statusCode = 0;
 	response = "";
@@ -589,7 +587,7 @@ int WifiStrength () {
 	Serial.print("RSSI: ");
 	Serial.println(RSSI);
 	
-	int bars = 0;
+	bars = 0;
 	
 	if (RSSI > -55) {
 		bars = 100;
@@ -618,10 +616,6 @@ int WifiStrength () {
 
 void OptionOne() {
 	Serial.println("Increment One output!");
-	ClearLCD();
-	WifiStrength ();
-	lcd.setCursor(0,1);
-	lcd.print(" QA Incrmnt");	
 	
 	typePhp(7);
 	
@@ -633,10 +627,6 @@ void OptionOne() {
 
 void OptionTwo() {
 	Serial.println("QCO Setup!");
-	ClearLCD();
-	WifiStrength ();
-	lcd.setCursor(0,1);
-	lcd.print("QCO Setup!");
 	
 	if (loopState==1) {
 		typePhp(3);
@@ -654,10 +644,6 @@ void OptionTwo() {
 
 void OptionThree() {
 	Serial.println("QA Defect detected!");
-	ClearLCD();
-	WifiStrength ();
-	lcd.setCursor(0,1);
-	lcd.print("QA Defect Found");	
 	
 	typePhp(4);
 	
@@ -669,10 +655,6 @@ void OptionThree() {
 
 void OptionFour() {
 	Serial.println("PRD Box done!");
-	ClearLCD();
-	WifiStrength ();
-	lcd.setCursor(0,1);
-	lcd.print("PRD Box done");
 	
 	typePhp(5);
 	
@@ -684,17 +666,14 @@ void OptionFour() {
 
 void OptionFive() {
 	Serial.println("Task Void!");
-	ClearLCD();
-	WifiStrength ();
-	lcd.setCursor(0,1);
-	lcd.print("Task Voided");
 	
 	typePhp(8);
 	
-	delay(100);
+	delayer(2);
 	Serial.println("PHP query to void");
 	buzzerFunction(2);
 	OnNeoPixel();
+	loopState=0;
 }
 
 void print_wakeup_reason(){
@@ -727,7 +706,7 @@ void checkButtonContents() {
 			Serial.print(customKey);
 			lcd.setCursor(data_count,1); 
 			lcd.print(Data[data_count]); 
-			delayer(2);
+			delay(50);
 			
 			if(!strcmp(Data, "1")){
 				//
@@ -743,7 +722,36 @@ void checkButtonContents() {
 				TNLeaveLoop=2;
 				xx=1;
 			}
+			
+			if(!strcmp(Data, "3")){
+				//
+				Serial.println("OptionThree");
+				OptionThree();
+				xx=1;
+			}
+			
+			if(!strcmp(Data, "4")){
+				//
+				Serial.println("OptionFour");
+				OptionFour();
+				xx=1;
+			}
+			
+			if(!strcmp(Data, "9")){
+				//
+				Serial.println("OptionFive - void");
+				TNLeaveLoop=2;
+				OptionFive();
+				xx=1;
+			}
+			
+			if(!strcmp(Data, "0")){
+				//
+				Serial.println("Cancel");
+				xx=1;
+			}
 			//
+			buttonState1 = 1;
 		}
 	}
 }
