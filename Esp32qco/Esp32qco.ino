@@ -27,11 +27,14 @@ LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars
 
 //membrane keyboard settings
 #define Input_Length 2 
+#define QAInput_Length 3 
 char Data[Input_Length]; 
+char QAData[QAInput_Length]; 
 char Master[Input_Length] = "1"; 
-byte data_count = 0, master_count = 0;
+byte data_count = 0, master_count = 0, input_count = 0;
 bool Pass_is_good;
 char customKey;
+char QAcustomKey;
 const byte ROWS = 4;
 const byte COLS = 3;
 
@@ -47,8 +50,8 @@ byte colPins[COLS] = {0, 2, 15};
 
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
-char serverAddress[] = "192.168.143.220";  // server address
-//char serverAddress[] = "10.37.10.149";  // server address
+//char serverAddress[] = "192.168.143.220";  // server address
+char serverAddress[] = "192.168.102.4";  // server address
 int port = 80;
 
 WiFiClient wifi;
@@ -99,6 +102,7 @@ int buzzerPin = 14;
 
 //loop state
 int loopState = 0;
+int QCOloopState = 0;
 int firstCheck = 0;
 int TNLeaveLoop = 0;
 
@@ -192,7 +196,7 @@ void loop() {
 	WifiStrength();
 	
 	lcd.setCursor(0,1);
-	lcd.print("Standby Mode  ");
+	lcd.print("Standby Mode    ");
 	Serial.println("Standby\n Mode");
 	
 	//getting tasks
@@ -282,6 +286,7 @@ void loop() {
 		int countToOne = 0;
 		long countToFiveAgain = 0;
 		int MinLeft = 15;
+		int printOnce = 1;
 		
 		//set LED to ON
 		digitalWrite(LedLight, HIGH);   // turn the LED on (HIGH is the voltage level)
@@ -292,13 +297,20 @@ void loop() {
 		//get WIFI strength data
 		WifiStrength ();
 		lcd.setCursor(0,1);
-		lcd.print("QCOSetup Started");
+		lcd.print("ChangeOver Start");
 
 		buzzerFunction(2);
 		
 		//delayer(1);
 		
 		while (TNLeaveLoop < 1) {
+			
+			if (printOnce == 1) {
+				WifiStrength ();
+				lcd.setCursor(0,1);
+				lcd.print("ChangOvr Ongoing");
+				printOnce=0;
+			}
 			
 			if (countToSec > 15) {
 				BlinkNeoPixel();
@@ -324,7 +336,7 @@ void loop() {
 				//get WIFI strength data
 				WifiStrength ();
 				lcd.setCursor(0,1);
-				lcd.print("QCOSetup Ongoing");
+				lcd.print("ChangOvr Ongoing");
 				countToOne = 0;
 			}
 			
@@ -359,7 +371,7 @@ void loop() {
 		//ClearLCD();
 		WifiStrength ();
 		lcd.setCursor(0,1);
-		lcd.print("Standby Mode  ");
+		lcd.print("Standby Mode    ");
 		Serial.println("Standby Mode");
 		
 		if (buttonState1 == LOW) {
@@ -393,7 +405,7 @@ int typePhp (int typer){
 		lcd.print("Ending C.Task");
 	} else if (typer==4) {
 		lcd.setCursor(0,1);
-		lcd.print("Record QA Defect");
+		lcd.print("Record QA Output");
 	} else if (typer==5) {
 		lcd.setCursor(0,1);
 		lcd.print("Record PRB Dn");
@@ -406,6 +418,12 @@ int typePhp (int typer){
 	} else if (typer==8) {
 		lcd.setCursor(0,1);
 		lcd.print("Task Voided");
+	} else if (typer==9) {
+		lcd.setCursor(0,1);
+		lcd.print("Start QCO Layout");
+	} else if (typer==10) {
+		lcd.setCursor(0,1);
+		lcd.print("End QCO Layout");
 	}
 	
 
@@ -465,7 +483,7 @@ int typePhp (int typer){
 	statusCode = 0;
 	
 
-    if ((typer==2)||(typer==3)||(typer==4)||(typer==5)) {
+    if ((typer==2)||(typer==3)||(typer==4)||(typer==5)||(typer==5)||(typer==7)||(typer==8)||(typer==9)||(typer==10)) {
 		Serial.print("Update ");
 		Serial.print(typer);
 		Serial.print(" successful! ");
@@ -615,18 +633,21 @@ int WifiStrength () {
 }
 
 void OptionOne() {
+	/*
 	Serial.println("Increment One output!");
-	
 	typePhp(7);
+	*/
+	Serial.println("Start QCO Layout bttn!");
+	typePhp(9);
 	
 	delay(100);
-	Serial.println("PHP query to add Increment Box");
+	Serial.println("PHP query to Start QCO Layout");
 	buzzerFunction(2);
 	OnNeoPixel();
 }
 
 void OptionTwo() {
-	Serial.println("QCO Setup!");
+	Serial.println("Line End/Start!");
 	
 	if (loopState==1) {
 		typePhp(3);
@@ -637,18 +658,55 @@ void OptionTwo() {
 	}
 	
 	delay(100);
-	Serial.println("PHP query for QCO Setup");
+	Serial.println("PHP query for Line End/Start!");
 	buzzerFunction(2);
 	OnNeoPixel();
 }
 
 void OptionThree() {
-	Serial.println("QA Defect detected!");
+	Serial.println("QCO end!");
 	
-	typePhp(4);
+	typePhp(10);
+	
+	/*
+	ClearLCD();
+	lcd.setCursor(0,0);
+	lcd.print("QA Output : ");
+	lcd.setCursor(0,1);
+	
+	int xx=0;
+	
+	//either input data from device or from kiosk
+	while (xx==0) {
+		QAcustomKey = customKeypad.getKey();
+		if (QAcustomKey){
+			QAData[input_count] = QAcustomKey; 
+			Serial.print(QAcustomKey);
+			lcd.setCursor(input_count,1); 
+			lcd.print(QAData[input_count]); 
+			input_count++;
+			delay(50);
+			
+			if(!strcmp(QAData, "00")){
+				//
+				Serial.println("Cancel");
+				xx=1;
+			}
+			
+			if(input_count == QAInput_Length-1){
+				xx=1;
+			}
+			
+			Serial.print("Value:");
+			Serial.println(QAData.toInt());
+		}
+		buttonState1 = 1;
+	}
+	*/
+	//typePhp(4);
 	
 	delay(100);
-	Serial.println("PHP query to add QA Defect");
+	Serial.println("PHP query to add QCO setup end");
 	buzzerFunction(2);
 	OnNeoPixel();
 }
@@ -674,6 +732,17 @@ void OptionFive() {
 	buzzerFunction(2);
 	OnNeoPixel();
 	loopState=0;
+}
+
+void OptionSix() {
+	Serial.println("QA Defect detected!");
+	
+	typePhp(9);
+	
+	delay(100);
+	Serial.println("PHP query to add QA Defect");
+	buzzerFunction(2);
+	OnNeoPixel();
 }
 
 void print_wakeup_reason(){
@@ -710,14 +779,14 @@ void checkButtonContents() {
 			
 			if(!strcmp(Data, "1")){
 				//
-				Serial.println("OptionOne");
+				Serial.println("OptionOne - Start QCO layout");
 				OptionOne();
 				xx=1;
 			}
 
 			if(!strcmp(Data, "2")){
 				//
-				Serial.println("OptionTwos");
+				Serial.println("OptionTwos - Line End/Start");
 				OptionTwo();
 				TNLeaveLoop=2;
 				xx=1;
@@ -725,14 +794,14 @@ void checkButtonContents() {
 			
 			if(!strcmp(Data, "3")){
 				//
-				Serial.println("OptionThree");
+				Serial.println("OptionThree - QCO Setup END");
 				OptionThree();
 				xx=1;
 			}
 			
 			if(!strcmp(Data, "4")){
 				//
-				Serial.println("OptionFour");
+				Serial.println("OptionFour - box done");
 				OptionFour();
 				xx=1;
 			}
