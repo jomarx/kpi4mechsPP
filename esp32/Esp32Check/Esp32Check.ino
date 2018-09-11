@@ -40,6 +40,7 @@ RTC_DATA_ATTR int bootCount = 0;
 int freq = 2000;
 int channel = 4;
 int resolution = 8;
+int buzzerPin = 15;
 
 //button debounce
 
@@ -96,7 +97,7 @@ void setup() {
 	pinMode(LockButton, INPUT_PULLUP);
 	
 	ledcSetup(channel, freq, resolution);
-	ledcAttachPin(4, channel);
+	ledcAttachPin(buzzerPin, channel);
 }
 
 void loop(void) {
