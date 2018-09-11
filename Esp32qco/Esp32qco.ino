@@ -17,12 +17,14 @@
 #include "config.h"
 #include <Wire.h>
 #include <Keypad.h>
+#include <esp_deep_sleep.h>
 
 #include <LiquidCrystal_I2C.h>
 //https://www.elecrow.com/wiki/index.php?title=Crowtail-_I2C_LCD
 
 //#include "LiquidCrystal.h"
 //LiquidCrystal lcd(0);
+//0x3F
 LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 //membrane keyboard settings
@@ -50,8 +52,8 @@ byte colPins[COLS] = {0, 2, 15};
 
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
-//char serverAddress[] = "192.168.143.220";  // server address
-char serverAddress[] = "192.168.102.4";  // server address
+char serverAddress[] = "192.168.143.220";  // server address
+//char serverAddress[] = "192.168.102.4";  // server address
 int port = 80;
 
 WiFiClient wifi;
@@ -61,7 +63,7 @@ String response;
 int statusCode = 0;
 
 //static deviceID that will be default per device.
-int deviceID = 1;
+int deviceID = 9;
 
 //button
 const int incButton = 12;
@@ -110,6 +112,9 @@ int TNLeaveLoop = 0;
 int bars = 0;
 int oldBars = 0;
 
+//battery
+int battIn = 27;
+
 void setup() {
 	
 	//watchdog timer
@@ -143,6 +148,8 @@ void setup() {
 	
 	pinMode(incButton, INPUT_PULLUP);
 	
+	pinMode(battIn, INPUT);
+	
 	pinMode(LedLight, OUTPUT);
 
 	attachInterrupt(incButton, incButtonChange, CHANGE);
@@ -155,7 +162,7 @@ void setup() {
 
 	WifiStrength ();
 	lcd.setCursor(0,0);
-	lcd.print("Device ID: ");
+	lcd.print("Device ID :     ");
 	lcd.setCursor(0,1);
 	lcd.print(deviceID);
 	delayer(1);
@@ -586,7 +593,7 @@ int buzzerFunction(int counter){
 		}
 		*/	Serial.println("Buzz!!");
 			ledcWriteTone(channel, 2755);
-			delay(1000);
+			delay(300);
 			ledcWriteTone(channel, 0);
 	}
 }
@@ -608,7 +615,7 @@ int WifiStrength () {
 	bars = 0;
 	
 	if (RSSI > -55) {
-		bars = 100;
+		bars = 99;
 	} else if (RSSI < -55 & RSSI > -65) {
 		bars = 75;
 	} else if (RSSI < -65 & RSSI > -70) {
@@ -620,16 +627,45 @@ int WifiStrength () {
 	} else {
 		bars = 0;
 	}
+	
+	// read the battery level from the ESP8266 analog in pin.
+	// analog read level is 10 bit 0-1023 (0V-1V).
+	// our 1M & 220K voltage divider takes the max
+	// lipo value of 4.2V and drops it to 0.758V max.
+	// this means our min analog read value should be 580 (3.14V)
+	// and the max analog read value should be 774 (4.2V).
+	int level = analogRead(battIn);
+	Serial.print("A0 level: ");
+	Serial.println(level);
 
+	// convert battery level to percent
+	level = map(level, 580, 850, 0, 100);
+	
+	//alternate battery check
+	float VBAT = (127.0f/100.0f) * 3.30f * float(analogRead(battIn)) / 4095.0f;  // LiPo battery
+    Serial.print("Battery Voltage = "); Serial.print(VBAT, 2);
+	Serial.println(" V");  
+	
+	//map float
+	//https://forum.arduino.cc/index.php?topic=115303.0
+	float level1 = (VBAT - 3.2f) * (100.0f - 0) / (4.2f - 3.2f) + 0;
+	Serial.print("Battery Percentage = "); Serial.print(level1, 0);
+	Serial.println(" %");  
+	
 	// prints WIFI / Battery on screen	
 	lcd.setCursor(0,0);
-	lcd.print("WiFi: ");
-	lcd.setCursor(6,0);
-	lcd.print(bars);
-	lcd.setCursor(10,0);
-	lcd.print("LC: ");
-	lcd.setCursor(13,0);
+	lcd.print("LC:");
 	lcd.print(cellLocation);
+	lcd.setCursor(6,0);
+	lcd.print("WF:");
+	lcd.print(bars);
+	lcd.setCursor(12,0);
+	lcd.print("B:");
+	if(level > 99) {
+		level = 99;
+	}
+	lcd.print(level);
+	
 }
 
 void OptionOne() {
@@ -761,7 +797,8 @@ void print_wakeup_reason(){
 }
 
 void checkButtonContents() {
-	//
+	//when button is pressed
+	buzzerFunction(1);
 	ClearLCD();
 	lcd.setCursor(0,0);
 	lcd.print("Input Choice: ");
@@ -780,6 +817,7 @@ void checkButtonContents() {
 			if(!strcmp(Data, "1")){
 				//
 				Serial.println("OptionOne - Start QCO layout");
+				buzzerFunction(1);
 				OptionOne();
 				xx=1;
 			}
@@ -787,6 +825,7 @@ void checkButtonContents() {
 			if(!strcmp(Data, "2")){
 				//
 				Serial.println("OptionTwos - Line End/Start");
+				buzzerFunction(1);
 				OptionTwo();
 				TNLeaveLoop=2;
 				xx=1;
@@ -795,6 +834,7 @@ void checkButtonContents() {
 			if(!strcmp(Data, "3")){
 				//
 				Serial.println("OptionThree - QCO Setup END");
+				buzzerFunction(1);
 				OptionThree();
 				xx=1;
 			}
@@ -802,6 +842,7 @@ void checkButtonContents() {
 			if(!strcmp(Data, "4")){
 				//
 				Serial.println("OptionFour - box done");
+				buzzerFunction(1);
 				OptionFour();
 				xx=1;
 			}
@@ -809,6 +850,7 @@ void checkButtonContents() {
 			if(!strcmp(Data, "9")){
 				//
 				Serial.println("OptionFive - void");
+				buzzerFunction(1);
 				TNLeaveLoop=2;
 				OptionFive();
 				xx=1;
@@ -817,7 +859,9 @@ void checkButtonContents() {
 			if(!strcmp(Data, "0")){
 				//
 				Serial.println("Cancel");
+				buzzerFunction(1);
 				xx=1;
+				ClearLCD();
 			}
 			//
 			buttonState1 = 1;
