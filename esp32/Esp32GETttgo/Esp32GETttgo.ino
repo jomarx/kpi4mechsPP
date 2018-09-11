@@ -16,6 +16,7 @@
 #include <WiFi.h>
 #include "config.h"
 #include <Wire.h>
+#include <esp_deep_sleep.h>
 
 #include "SSD1306.h" 
 // alias for `#include "SSD1306Wire.h"`
@@ -26,6 +27,7 @@ SSD1306 display(0x3c, 5, 4);
 // or
 // SH1106Brzo  display(0x3c, D3, D5);
 
+#include <OneWire.h>
 
 char serverAddress[] = "192.168.143.220";  // server address
 //char serverAddress[] = " 192.168.43.191";  // server address
@@ -39,7 +41,7 @@ int statusCode = 0;
 
 //mechanic ID
 //static NotifNo that will be default per device.
-int mechanicID = 1;
+int mechanicID = 13;
 
 //button
 const int startButton = 12;
@@ -79,18 +81,41 @@ int channel = 0;
 int resolution = 8;
 int buzzerPin = 15;
 
+//ds2401 port to check
+OneWire ds(17);
+
+//watchdog timer
+const int wdtTimeout = 10000;  //time in ms to trigger the watchdog
+hw_timer_t *timer = NULL;
+
+void IRAM_ATTR resetModule() {
+  ets_printf("WDTreboot\n");
+  esp_restart_noos();
+}
+
+//battery level global variable
+int level = 99;
+int oldLevel = 99;
+
 void setup() {
 	
 	//watchdog timer
 	//ESP.wdtDisable();
 
-	WiFi.mode(WIFI_STA);
-
-	buzzerFunction(3);
-
 	Serial.begin(115200);
+	
+	//watchdog timer
+	timer = timerBegin(0, 80, true);                  //timer 0, div 80
+	timerAttachInterrupt(timer, &resetModule, true);  //attach callback
+	timerAlarmWrite(timer, wdtTimeout * 1000, false); //set time in us
+	timerAlarmEnable(timer);                          //enable interrupt
+	
+	WiFi.mode(WIFI_STA);
+	
 	wifiConnect();
-
+	
+	WiFi.setHostname("NotifNo13"); //This changes the hostname of the ESP8266 to display neatly on the network esp on router.
+	
 	// print the SSID of the network you're attached to:
 	Serial.print("SSID: ");
 	Serial.println(WiFi.SSID());
@@ -100,7 +125,6 @@ void setup() {
 	Serial.print("IP Address: ");
 	Serial.println(ip);
 	
-
 	String wfms = WiFi.macAddress();
 	Serial.print("MAC address : ");
 	Serial.println(wfms);
@@ -108,8 +132,10 @@ void setup() {
 	// Initialising the UI will init the display too.
 	display.init();
 
-	display.flipScreenVertically();
+	//disable for esp32ttgo screens
+	//display.flipScreenVertically();
 	display.setFont(ArialMT_Plain_16);
+	//display.setRotation(2);
 
 	pinMode(startButton, INPUT_PULLUP);
 	pinMode(cancelButton, INPUT_PULLUP);
@@ -123,6 +149,10 @@ void setup() {
 	ledcSetup(channel, freq, resolution);
 	ledcAttachPin(buzzerPin, channel);
 	
+	timerWrite(timer, 0); //reset timer (feed watchdog)
+	
+	buzzerFunction(3);
+	
 	displayClear();
 
 	WifiStrength ();
@@ -130,12 +160,12 @@ void setup() {
 	display.drawString(64, 22, "Mechanic ID :\n" + String(mechanicID));
 	display.display();
 	
+	delayer(2);
+	
 	Serial.println("WiFi connected");
 	Serial.println("IP address: ");
 	Serial.println(WiFi.localIP());
 	
-	//delayer(3);
-
 	displayClear();
 	WifiStrength ();
 	display.setTextAlignment(TEXT_ALIGN_CENTER);
@@ -143,10 +173,15 @@ void setup() {
 	display.print("\n");
 	display.display();
 	
-
+	delayer(1);
+	
+	timerWrite(timer, 0); //reset timer (feed watchdog)
+	
 }
 
 void loop() {
+	
+	timerWrite(timer, 0); //reset timer (feed watchdog)
 	
 	//Increment boot number and print it every reboot
 	++bootCount;
@@ -210,6 +245,7 @@ void loop() {
 	}
 	//reset status code
 	statusCode = 0;
+	timerWrite(timer, 0); //reset timer (feed watchdog)
   
   if ((response != "")&&(typer == 1)) {
 	  
@@ -262,17 +298,20 @@ void loop() {
 
 		display.display();
 		buzzerFunction(5);
+		timerWrite(timer, 0); //reset timer (feed watchdog)
 		
 		while (TNLeaveLoop < 1) {
 			
 			//buttonState1 = digitalRead(startButton);
 			//buttonState2 = digitalRead(cancelButton);
 			
+			timerWrite(timer, 0); //reset timer (feed watchdog)
 			if (countToSec > 15) {
 				BlinkNeoPixel();
 				countToSec = 0;
 			}
-				
+			
+			timerWrite(timer, 0); //reset timer (feed watchdog)			
 			if (buttonState1 == LOW && buttonState2 == HIGH) {
 				
 				OnNeoPixel();
@@ -287,12 +326,15 @@ void loop() {
 				ElapsedTime=0;
 				Serial.print("start task!!");
 				Serial.println("PHP query to start task");
+				timerWrite(timer, 0); //reset timer (feed watchdog)
 				
 				
 				if (Status.toInt() != 2){
+					timerWrite(timer, 0); //reset timer (feed watchdog)
 					Serial.println("update task normally");
 					typePhp(2);
 				} else {
+					timerWrite(timer, 0); //reset timer (feed watchdog)
 					Serial.println("update task Mech Status Only");
 					typePhp(6);
 				}
@@ -303,6 +345,7 @@ void loop() {
 				
 				Serial.print("starting loop to wait to finish task");
 				for (int tempTimer = 0;tempTimer <= 3;tempTimer++)  {
+					timerWrite(timer, 0); //reset timer (feed watchdog)
 					//buttonState1 = digitalRead(startButton);
 					delay(200);
 			
@@ -319,6 +362,7 @@ void loop() {
 					}
 			
 					if (countToMinute > 300){
+						timerWrite(timer, 0); //reset timer (feed watchdog)
 						buzzerFunction(1);
 						countToMinute = 0;
 						ElapsedTime=ElapsedTime+1;
@@ -351,7 +395,7 @@ void loop() {
 				WifiStrength ();
 				display.setTextAlignment(TEXT_ALIGN_CENTER);
 				
-				display.drawString(64, 8, "Task Done\n Requesting new task \n");
+				display.drawString(64, 8, "Task Done\n Requesting\n new task");
 				display.display();
 				
 				//query for end time
@@ -365,17 +409,19 @@ void loop() {
 				TNLeaveLoop = 2;
 				buttonState2 == HIGH;
 			}
+			
+			timerWrite(timer, 0); //reset timer (feed watchdog)
 			if (buttonState1 == HIGH && buttonState2 == LOW){
-				CancelTask();		
+				//CancelTask();		
 			}
 	
 			
 			
 			//jomar
-			
+			timerWrite(timer, 0); //reset timer (feed watchdog)
 			if (countToMinute > 1200 && TNLeaveLoop < 1){
+				timerWrite(timer, 0); //reset timer (feed watchdog)
 				displayClear();
-
 				display.setTextAlignment(TEXT_ALIGN_LEFT);
 				//get WIFI strength data
 				WifiStrength ();
@@ -389,8 +435,10 @@ void loop() {
 				buzzerFunction(5);
 			}
 			
+			timerWrite(timer, 0); //reset timer (feed watchdog)
 			if (countToFifteen > 18000 && TNLeaveLoop < 1){
 				Serial.println("function to update DB, 15mins have past, auto assign");
+				timerWrite(timer, 0); //reset timer (feed watchdog)
 		
 				displayClear();
 				WifiStrength ();
@@ -417,6 +465,7 @@ void loop() {
 			countToMinute++;
 			countToSec++;
 			delay(50);
+			timerWrite(timer, 0); //reset timer (feed watchdog)
 			
 		
 		}
@@ -454,8 +503,9 @@ void loop() {
 	  Serial.println("Update 2 successful! ");
 	  Serial.println();*/
 	  
-  } else {
-	  	OnNeoPixel();
+	}
+	else {
+		OnNeoPixel();
 		displayClear();
 		WifiStrength ();
 		display.setTextAlignment(TEXT_ALIGN_CENTER);
@@ -470,7 +520,7 @@ void loop() {
 		esp_deep_sleep_start();
 		//sleep esp8266 for 1mins
 		ESP.restart();
-  }
+	}
   
 	Serial.println("Wait 2 seconds");
 	delayer(2);
@@ -480,7 +530,7 @@ void loop() {
 
 int typePhp (int typer){
 	
-	
+	timerWrite(timer, 0); //reset timer (feed watchdog)
 	statusCode = 0;
 	response = "";
 	Serial.println("making POST request");
@@ -507,8 +557,7 @@ int typePhp (int typer){
 
 	Serial.println();
 	Serial.println("Start sending loop");
-	
-	
+	timerWrite(timer, 0); //reset timer (feed watchdog)
 	
 	while ( statusCode != 200) {
 		
@@ -531,6 +580,7 @@ int typePhp (int typer){
 	}
 	//reset status code
 	statusCode = 0;
+	timerWrite(timer, 0); //reset timer (feed watchdog)
 	
 
     if ((typer==2)||(typer==3)||(typer==4)||(typer==5)||(typer==6)) {
@@ -541,8 +591,8 @@ int typePhp (int typer){
 	}
   
 	if ((response != "")&&(typer == 1)) {
-	  
-		
+	 
+		timerWrite(timer, 0); //reset timer (feed watchdog)
 		Serial.println();
 		Serial.println("not empty, means task available!");
 
@@ -563,9 +613,8 @@ int typePhp (int typer){
 		
 		client.stop();
 
-		  
-	Serial.println("Wait 2 seconds");
-	delayer(2);
+		Serial.println("Wait 2 seconds");
+		delayer(2);
 	
 	}
 }
@@ -579,14 +628,14 @@ void wifiConnect () {
 		
 		Serial.print(".");
 		ResetCounter++;
-		
 		delay(300);
+		timerWrite(timer, 0); //reset timer (feed watchdog)
+		
 		if (ResetCounter >= 30) {
 			Serial.print("ESP8266 reset!");
-			
 			display.init();
 
-			display.flipScreenVertically();
+			//display.flipScreenVertically();
 			display.setFont(ArialMT_Plain_16);
 			
 			displayClear();
@@ -661,10 +710,12 @@ int buzzerFunction(int counter){
 			ledcWriteTone(channel, freq);
 			delay(1000);
 		}
-		*/	Serial.println("Buzz!!");
-			ledcWriteTone(channel, 2755);
-			delay(1000);
-			ledcWriteTone(channel, 0);
+		*/	
+		Serial.println("Buzz!!");
+		ledcWriteTone(channel, 2755);
+		delay(200);
+		ledcWriteTone(channel, 0);
+		timerWrite(timer, 0); //reset timer (feed watchdog)
 	}
 }
 
@@ -674,6 +725,7 @@ int delayer(int dly){
 		delay(1000);
 		Serial.print(DelayDaw);
 		Serial.print(".");
+		timerWrite(timer, 0); //reset timer (feed watchdog)
 	}
 }
 
@@ -704,22 +756,46 @@ int WifiStrength () {
 	// lipo value of 4.2V and drops it to 0.758V max.
 	// this means our min analog read value should be 580 (3.14V)
 	// and the max analog read value should be 774 (4.2V).
-	int level = analogRead(34);
+	
+	level = analogRead(34);
+	
 	Serial.print("A0 level: ");
 	Serial.print(level);
 
 	// convert battery level to percent
-	level = map(level, 580, 774, 0, 100);
+	level = map(level, 580, 850, 0, 100);
 	Serial.print("Battery level: "); Serial.print(level); Serial.println("%");
+	
+	//alternate battery check
+	float VBAT = (127.0f/100.0f) * 3.30f * float(analogRead(34)) / 4095.0f;  // LiPo battery
+    Serial.print("Battery Voltage = "); Serial.print(VBAT, 2);
+	Serial.println(" V");  
+	
+	//map float
+	//https://forum.arduino.cc/index.php?topic=115303.0
+	float level1 = (VBAT - 3.2f) * (100.0f - 0) / (4.2f - 3.2f) + 0;
+	Serial.print("Battery Percentage = "); Serial.print(level1, 0);
+	Serial.println(" %");  
+	
 	// prints WIFI / Battery on screen	
 	display.setTextAlignment(TEXT_ALIGN_LEFT);
+	
+	if(level1 > 99) {
+		level1 = 99;
+	}
+	
+	if(level > oldLevel){
+		level = oldLevel;		
+	} 
+	else {
+		oldLevel = level;
+	}
+	
 	display.drawStringMaxWidth(0, 0, 128, "WiFi:" + String(bars) + " BT:" + String(level));
 	display.display();	
 }
 
 void CancelTask() {
-	
-	
 	Serial.println("Checking if I can cancel task");
 	
 	if (cellLocation != "") {
